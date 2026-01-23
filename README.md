@@ -1,17 +1,17 @@
-# Universal Explainer
+# Lumina
 
-**Universal Explainer** is a Chrome Extension that leverages the power of multiple GenAI models (Gemini, ChatGPT, and Claude) to explain *anything* currently visible on your screen. Whether it's a presentation slide, a complex research paper, a news article, or a data dashboard, this extension provides instant, multi-perspective insights.
+**Lumina** is a Chrome Extension that leverages the power of multiple GenAI models (Gemini, ChatGPT, and Claude) to explain *anything* currently visible on your screen. Whether it's a presentation slide, a complex research paper, a news article, or a data dashboard, **Lumina** provides instant, multi-perspective insights.
 
 ![App Icon](icon.png)
 
 ## Features
 
--   **Universal Capture**: Takes a screenshot of your active tab.
+-   **Universal Capture**: Instantly captures a screenshot of your active tab.
 -   **Multi-Model Intelligence**: Get explanations from three leading AI models simultaneously:
     -   **Google Gemini 1.5 Flash**
     -   **OpenAI GPT-4o**
     -   **Anthropic Claude 3.5 Sonnet**
--   **Side-by-Side Comparison**: Compare how different AIs interpret the same content.
+-   **Side-by-Side Comparison**: Compare how different AIs interpret the same content in a single view.
 -   **Secure**: Your API keys are stored locally in your browser (`chrome.storage.local`) and never sent to our servers.
 
 ## Installation
@@ -26,7 +26,7 @@ Since this is a developer preview (unpacked extension):
 
 ## Configuration
 
-1.  Click the **Universal Explainer** extension icon in your toolbar.
+1.  Click the **Lumina** extension icon in your toolbar.
 2.  Click the **Settings (Gear)** icon in the top-right corner of the popup.
 3.  Enter your API Keys for the services you wish to use:
     -   [Get Gemini Key](https://aistudio.google.com/app/apikey)
@@ -36,10 +36,9 @@ Since this is a developer preview (unpacked extension):
 
 ## Usage
 
-1.  Navigate to any webpage you want to understand better.
-2.  Click the extension icon.
-3.  Click the **Explain Page** button.
-4.  Wait for the analysis to stream in from the configured models.
+1.  Navigate to any webpage, slide, or document you want to understand.
+2.  Click the **Lumina** extension icon.
+3.  **That's it!** Lumina will automatically capture the screen and stream explanations from your configured models.
 
 ## Technologies Used
 

@@ -1,8 +1,8 @@
-# Project Report: Universal Explainer
+# Project Report: Lumina
 
 ## 1. Project Overview
 
-**Universal Explainer** is a browser extension designed to bridge the gap between visual content consumption and deep understanding. By integrating multiple Large Multimodal Models (LMMs), it allows users to instantly "query" any visual context in their browser—be it a slide deck, a scientific diagram, or a foreign language article.
+**Lumina** is a browser extension designed to bridge the gap between visual content consumption and deep understanding. By integrating multiple Large Multimodal Models (LMMs), it allows users to instantly "query" any visual context in their browser—be it a slide deck, a scientific diagram, or a foreign language article.
 
 ## 2. Technical Architecture
 
@@ -20,18 +20,24 @@ We minimized permissions to only what is strictly necessary:
 The extension calls AI provider APIs directly from the client side (`popup.js` / services).
 -   **Pros**: Simplicity. No need for a middleman/backend server. User owns their keys.
 -   **Cons**: Potential CORS (Cross-Origin Resource Sharing) issues.
-    -   *Mitigation*: Chrome Extensions have privileged access to make cross-origin requests if configured correctly. For APIs that are strict (like Anthropic), this sometimes requires background script proxies, but for this iteration, direct fetch was implemented for simplicity, assuming direct browser access capability or future proxy implementation if needed.
+    -   *Mitigation*: Chrome Extensions have privileged access to make cross-origin requests if configured correctly. We implemented direct fetch calls which work seamlessly within the extension context.
 
 ## 3. Design Decisions
 
-### 3.1 "Universal" vs "Slide"
-Initially scoped as a "Slide Explainer", we quickly realized the underlying technology (Screenshot -> AI) is agnostic to the content.
--   **Pivot**: Renamed to "Universal Explainer".
--   **Impact**: UI wording changed from "Slide" to "Page". Prompt handling remained generic ("explain") to allow the AI to infer context from the image itself.
+### 3.1 From "Slide Explainer" to "Lumina"
+Initially scoped as a tool for explaining presentation slides, we realized the underlying technology (Screenshot -> AI) is agnostic to the content.
+-   **Pivot**: Rebranded to "Lumina" to reflect its ability to shed light on any specific topic or screen.
+-   **Impact**: UI wording changed from specific "Slide" terminology to generic "Explanation". The prompt remains flexible to allow the AI to infer context from the image itself.
 
-### 3.2 Multi-Model UI
+### 3.2 Zero-Click Experience
+We prioritized speed and friction reduction. Use cases often involve quickly checking a slide or graph.
+-   **Decision**: Instead of requiring a "Take Screenshot" button press, the extension **automatically captures and starts explaining** as soon as the popup opens.
+-   **Benefit**: Reduces user interaction time significantly.
+-   **Fallback**: A manual "Explain" button remains hidden but accessible via code logic if we need to expose it for retries in the future.
+
+### 3.3 Multi-Model Vertical Stack
 We chose a **vertical stack** layout for results rather than tabs.
--   **Reasoning**: This allows users to scroll and quickly compare the length and quality of responses without clicking back and forth. It reinforces the "comparison" value proposition.
+-   **Reasoning**: This allows users to scroll and quickly compare the length and quality of responses from Gemini, GPT-4o, and Claude without clicking back and forth. It reinforces the "comparison" value proposition.
 
 ## 4. Challenges & Solutions
 
