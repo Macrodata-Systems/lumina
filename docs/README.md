@@ -58,6 +58,21 @@ Lumina makes setup easy with direct links to get your keys:
 4.  **DeepSeek CoT**: Expand the "DeepSeek Thought Process" to see how the model arrived at its answer.
 5.  **Multi-Model Results**: View explanations from all configured models simultaneously.
 
+## Developer Mode (Unlock Pro Features)
+
+For development purposes, you can forcefully unlock all "Pro" features (ChatGPT 4o, Claude, DeepSeek, Grok, History) without a license key.
+
+1.  Open `config.js` in the project root.
+2.  Set `developerMode: true`.
+3.  Reload the extension.
+
+```javascript
+export const API_CONFIG = {
+    // ... keys ...
+    developerMode: true // true = Unlocked, false = Standard (Requires License)
+};
+```
+
 ## Technologies Used
 
 -   **Manifest V3**: Modern Chrome Extension architecture.

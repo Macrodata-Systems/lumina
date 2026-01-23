@@ -594,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /* History & License Logic */
 
     function isPro() {
+        if (API_CONFIG.developerMode) return true;
         const key = licenseKeyInput.value.trim();
         return key.startsWith('LUMINA-PRO') || key.startsWith('TEST');
     }

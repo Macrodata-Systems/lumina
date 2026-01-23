@@ -16,5 +16,8 @@ export const API_CONFIG = {
     openaiKey: "",
     anthropicKey: "",
     grokKey: "",
-    deepseekKey: ""
+    deepseekKey: "",
+
+    // Set to true to unlock all features for development
+    developerMode: true
 };

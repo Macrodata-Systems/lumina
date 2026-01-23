@@ -877,3 +877,27 @@ summary:hover {
   height: auto;
   border-radius: 4px;
 }
+/* Footer Styles */
+.footer-info {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--secondary-text);
+}
+
+.footer-links {
+    margin-top: 5px;
+}
+
+.footer-links a {
+    color: var(--secondary-text);
+    text-decoration: none;
+    margin: 0 5px;
+}
+
+.footer-links a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
