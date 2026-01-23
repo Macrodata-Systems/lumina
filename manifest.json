@@ -17,10 +17,10 @@
     "action": {
         "default_title": "Lumina",
         "default_icon": {
-            "16": "icon16.png",
-            "32": "icon32.png",
-            "48": "icon.png",
-            "128": "icon128.png"
+            "16": "assets/icon16.png",
+            "32": "assets/icon32.png",
+            "48": "assets/icon.png",
+            "128": "assets/icon128.png"
         }
     },
     "side_panel": {
@@ -30,9 +30,9 @@
         "service_worker": "background.js"
     },
     "icons": {
-        "16": "icon16.png",
-        "32": "icon32.png",
-        "48": "icon.png",
-        "128": "icon128.png"
+        "16": "assets/icon16.png",
+        "32": "assets/icon32.png",
+        "48": "assets/icon.png",
+        "128": "assets/icon128.png"
     }
 }

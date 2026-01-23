@@ -2,7 +2,7 @@
 
 **Lumina** is a Chrome Extension that leverages the power of multiple GenAI models (Gemini, ChatGPT, and Claude) to explain *anything* currently visible on your screen. Whether it's a presentation slide, a complex research paper, a news article, or a data dashboard, **Lumina** provides instant, multi-perspective insights.
 
-![App Icon](icon.png)
+![App Icon](assets/icon.png)
 
 ## Features
 
