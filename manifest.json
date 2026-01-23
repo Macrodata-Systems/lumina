@@ -1,0 +1,20 @@
+{
+    "manifest_version": 3,
+    "name": "Lumina",
+    "version": "1.1",
+    "description": "Explain anything on your screen - Slides, Papers, News, Articles - using Gemini, OpenAI, and Claude.",
+    "permissions": [
+        "activeTab",
+        "storage"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Explain This"
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "icons": {
+        "48": "icon.png"
+    }
+}
