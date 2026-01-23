@@ -22,27 +22,86 @@
         </header>
 
         <div id="main-view">
-            <button id="explain-btn" class="hidden">Explain Page</button>
+            <div class="controls-wrapper">
+                <div class="super-prompt-bar">
+                    <!-- Left: Source Toggles -->
+                    <div class="source-toggles">
+                        <button id="toggle-screenshot" class="source-btn" title="Toggle Screenshot">📸</button>
+                        <button id="toggle-pagetext" class="source-btn active" title="Toggle Page Text">📄</button>
+                    </div>
+
+                    <!-- Center: Input -->
+                    <div class="input-wrapper">
+                        <textarea id="custom-prompt" placeholder="Ask AI... (Type or Speak)" rows="1"></textarea>
+                    </div>
+
+                    <!-- Right: Actions -->
+                    <div class="action-buttons">
+                        <button id="mic-btn" class="icon-action-btn" title="Voice Input">🎤</button>
+                        <button id="load-text-btn" class="icon-action-btn" title="Paste Page Text">📥</button>
+                        <button id="send-btn" class="icon-action-btn primary" title="Send">➤</button>
+                    </div>
+                </div>
+
+                <div class="chips">
+                    <button class="chip" data-prompt="Summarize this">Summary</button>
+                    <button class="chip" data-prompt="Give commentary on this">Commentary</button>
+                    <button class="chip" data-prompt="Track my work based on this">Track Work</button>
+                </div>
+
+                <button id="explain-btn" class="hidden">Explain Page</button>
+
+                <div class="tabs">
+                    <button class="tab-btn" data-tab="deepseek-section">🦈 DeepSeek</button>
+                    <button class="tab-btn active" data-tab="gemini-section">✨ Gemini</button>
+                    <button class="tab-btn" data-tab="openai-section">🤖 ChatGPT</button>
+                    <button class="tab-btn" data-tab="anthropic-section">🧠 Claude</button>
+                </div>
+
+                <details id="query-details">
+                    <summary>View Constructed Query</summary>
+                    <div id="query-content">Waiting for request...</div>
+                </details>
+            </div>
 
             <div id="results-container" class="hidden">
-                <div class="result-section" id="gemini-section">
+                <div class="result-section active-section" id="gemini-section">
                     <div class="section-header">
-                        <h3>✨ Gemini</h3>
-                        <button class="config-btn" data-target="gemini-key">⚙️</button>
+                        <h3>Gemini Response</h3>
+                        <div class="header-actions-small">
+                            <button class="refresh-btn" data-target="gemini">🔄</button>
+                            <button class="config-btn" data-target="gemini-key">⚙️</button>
+                        </div>
                     </div>
                     <div class="content"></div>
                 </div>
                 <div class="result-section" id="openai-section">
                     <div class="section-header">
-                        <h3>🤖 ChatGPT</h3>
-                        <button class="config-btn" data-target="openai-key">⚙️</button>
+                        <h3>ChatGPT Response</h3>
+                        <div class="header-actions-small">
+                            <button class="refresh-btn" data-target="openai">🔄</button>
+                            <button class="config-btn" data-target="openai-key">⚙️</button>
+                        </div>
                     </div>
                     <div class="content"></div>
                 </div>
                 <div class="result-section" id="anthropic-section">
                     <div class="section-header">
-                        <h3>🧠 Claude</h3>
-                        <button class="config-btn" data-target="anthropic-key">⚙️</button>
+                        <h3>Claude Response</h3>
+                        <div class="header-actions-small">
+                            <button class="refresh-btn" data-target="anthropic">🔄</button>
+                            <button class="config-btn" data-target="anthropic-key">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="content"></div>
+                </div>
+                <div class="result-section" id="deepseek-section">
+                    <div class="section-header">
+                        <h3>DeepSeek Response</h3>
+                        <div class="header-actions-small">
+                            <button class="refresh-btn" data-target="deepseek">🔄</button>
+                            <button class="config-btn" data-target="deepseek-key">⚙️</button>
+                        </div>
                     </div>
                     <div class="content"></div>
                 </div>
@@ -71,6 +130,13 @@
                     <a href="https://console.anthropic.com/settings/keys" target="_blank" class="help-link">Get Key</a>
                 </div>
                 <input type="password" id="anthropic-key" placeholder="Enter Anthropic API Key">
+            </div>
+            <div class="input-group">
+                <div class="label-row">
+                    <label for="deepseek-key">DeepSeek API Key</label>
+                    <a href="https://platform.deepseek.com/api_keys" target="_blank" class="help-link">Get Key</a>
+                </div>
+                <input type="password" id="deepseek-key" placeholder="Enter DeepSeek API Key">
             </div>
             <button id="save-settings-btn" class="secondary-btn">Save</button>
             <button id="back-btn" class="text-btn">Back</button>

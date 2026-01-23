@@ -1,20 +1,23 @@
-export async function callOpenAI(apiKey, base64Image) {
+export async function callOpenAI(apiKey, base64Image, prompt = "explain") {
     const url = 'https://api.openai.com/v1/chat/completions';
     
+    const content = [{ type: "text", text: prompt }];
+    
+    if (base64Image) {
+        content.push({
+            type: "image_url",
+            image_url: {
+                url: base64Image
+            }
+        });
+    }
+
     const payload = {
       model: "gpt-4o",
       messages: [
         {
           role: "user",
-          content: [
-            { type: "text", text: "explain" },
-            {
-              type: "image_url",
-              image_url: {
-                url: base64Image // API accepts data URI directly
-              }
-            }
-          ]
+          content: content
         }
       ],
       max_tokens: 500

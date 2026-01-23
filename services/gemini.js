@@ -16,24 +16,26 @@ async function listAvailableModels(apiKey) {
   }
 }
 
-export async function callGemini(apiKey, base64Image) {
+export async function callGemini(apiKey, base64Image, prompt = "explain") {
   // Debug log confirms 1.5 is unavailable. Using 2.5-flash which IS available.
   const modelName = 'gemini-2.5-flash'; 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
   
-  const base64Data = base64Image.split(',')[1];
-
-  const payload = {
-    contents: [{
-      parts: [
-        { text: "explain" },
-        {
+  const parts = [{ text: prompt }];
+  
+  if (base64Image) {
+      const base64Data = base64Image.split(',')[1];
+      parts.push({
           inline_data: {
             mime_type: "image/jpeg",
             data: base64Data
           }
-        }
-      ]
+      });
+  }
+
+  const payload = {
+    contents: [{
+      parts: parts
     }]
   };
 

@@ -1,6 +1,7 @@
 import { callGemini } from './services/gemini.js';
 import { callOpenAI } from './services/openai.js';
 import { callAnthropic } from './services/anthropic.js';
+import { callDeepSeek } from './services/deepseek.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const settingsBtn = document.getElementById('settings-btn');
@@ -16,12 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const geminiKeyInput = document.getElementById('gemini-key');
     const openaiKeyInput = document.getElementById('openai-key');
     const anthropicKeyInput = document.getElementById('anthropic-key');
+    const deepseekKeyInput = document.getElementById('deepseek-key');
 
     // Load Settings & Theme
-    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'theme'], (result) => {
+    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'deepseekKey', 'theme'], (result) => {
         if (result.geminiKey) geminiKeyInput.value = result.geminiKey;
         if (result.openaiKey) openaiKeyInput.value = result.openaiKey;
         if (result.anthropicKey) anthropicKeyInput.value = result.anthropicKey;
+        if (result.deepseekKey) deepseekKeyInput.value = result.deepseekKey;
         
         // Apply saved theme or default to light
         const currentTheme = result.theme || 'dark';
@@ -100,7 +103,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const keys = {
             geminiKey: geminiKeyInput.value.trim(),
             openaiKey: openaiKeyInput.value.trim(),
-            anthropicKey: anthropicKeyInput.value.trim()
+            anthropicKey: anthropicKeyInput.value.trim(),
+            deepseekKey: deepseekKeyInput.value.trim()
         };
         chrome.storage.local.set(keys, () => {
             alert('Settings saved!');
@@ -108,57 +112,294 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Tab Logic
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const resultSections = document.querySelectorAll('.result-section');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+             const targetId = btn.getAttribute('data-tab');
+             switchTab(targetId);
+        });
+    });
+
+    function switchTab(tabId) {
+        // specific tab button
+        tabBtns.forEach(btn => {
+            if(btn.getAttribute('data-tab') === tabId) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // specific section
+        resultSections.forEach(sec => {
+            if(sec.id === tabId) {
+                sec.classList.add('active-section');
+            } else {
+                sec.classList.remove('active-section');
+            }
+        });
+    }
+
+    // Prompt Logic
+    const promptInput = document.getElementById('custom-prompt');
+    const chips = document.querySelectorAll('.chip');
+
+
+
+    chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            promptInput.value = chip.getAttribute('data-prompt');
+            startExplanation();
+        });
+    });
+
+    promptInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            startExplanation();
+        }
+    });
+
+    // Refresh Buttons Logic
+    document.querySelectorAll('.refresh-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+             e.stopPropagation(); // prevent collapsing if we were in a specialized header
+             const target = btn.getAttribute('data-target');
+             if(target) {
+                 startExplanation([target]);
+             }
+        });
+    });
+
+
+
+    // Super Prompt Bar Logic
+    let useScreenshot = false;
+    let usePageText = true; // Default
+
+    const toggleScreenshotBtn = document.getElementById('toggle-screenshot');
+    const togglePageTextBtn = document.getElementById('toggle-pagetext');
+    const micBtn = document.getElementById('mic-btn');
+    const loadTextBtn = document.getElementById('load-text-btn');
+    const sendBtn = document.getElementById('send-btn');
+
+    // Init Toggles (Sync with HTML)
+    const updateToggleUI = () => {
+        toggleScreenshotBtn.classList.toggle('active', useScreenshot);
+        togglePageTextBtn.classList.toggle('active', usePageText);
+    };
+    updateToggleUI();
+
+    toggleScreenshotBtn.addEventListener('click', () => {
+        useScreenshot = !useScreenshot;
+        updateToggleUI();
+    });
+
+    togglePageTextBtn.addEventListener('click', () => {
+       usePageText = !usePageText;
+       updateToggleUI();
+    });
+
+    // Audio Input (Web Speech API)
+    if ('webkitSpeechRecognition' in window) {
+        const recognition = new webkitSpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        micBtn.addEventListener('click', () => {
+            if (micBtn.classList.contains('listening')) {
+                recognition.stop();
+            } else {
+                recognition.start();
+                micBtn.classList.add('listening');
+            }
+        });
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            promptInput.value += (promptInput.value ? " " : "") + transcript;
+            micBtn.classList.remove('listening');
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech Error:", event.error);
+            micBtn.classList.remove('listening');
+        };
+
+        recognition.onend = () => {
+            micBtn.classList.remove('listening');
+        };
+    } else {
+        micBtn.style.display = 'none'; // Hide if not supported
+    }
+
+    // Load Text logic
+    loadTextBtn.addEventListener('click', async () => {
+        loadTextBtn.style.opacity = '0.5';
+        const text = await scrapePageText();
+        if(text) {
+             // promptInput.value += "\n\n" + text; // Append or Replace? User asked to "load it on the prompt box"
+             // Usually replacing or filling is better context. Let's append if exists.
+             promptInput.value = text; // "load it on the prompt box" implies populating it
+             loadTextBtn.style.color = 'var(--primary-color)';
+             setTimeout(() => {
+                 loadTextBtn.style.color = '';
+                 loadTextBtn.style.opacity = '1';
+             }, 1000);
+        } else {
+            alert("Could not extract text.");
+             loadTextBtn.style.opacity = '1';
+        }
+    });
+    
+    // Send Button
+    sendBtn.addEventListener('click', () => startExplanation());
+
+
     // Auto-Explain Logic
-    const startExplanation = async () => {
+    // targetServices: array of strings ['gemini', 'openai', 'anthropic', 'deepseek'] or null (for all)
+    const startExplanation = async (targetServices = null) => {
+        // useScreenshot and usePageText are now global module vars updated by buttons
+
+        if (!useScreenshot && !usePageText) {
+             updateSection('gemini-section', 'Please select at least one source (Screenshot or Page Text).');
+             return;
+        }
+
         const resultsContainer = document.getElementById('results-container');
         resultsContainer.classList.remove('hidden');
-        explainBtn.classList.add('hidden'); // Hide button if shown
+        explainBtn.classList.add('hidden'); 
         
-        // Show loading state
-        updateSection('gemini-section', 'Loading...');
-        updateSection('openai-section', 'Loading...');
-        updateSection('anthropic-section', 'Loading...');
+        // Only show loading for targets
+        if (!targetServices || targetServices.includes('gemini')) updateSection('gemini-section', 'Loading...');
+        if (!targetServices || targetServices.includes('openai')) updateSection('openai-section', 'Loading...');
+        if (!targetServices || targetServices.includes('anthropic')) updateSection('anthropic-section', 'Loading...');
+        if (!targetServices || targetServices.includes('deepseek')) updateSection('deepseek-section', 'Loading...');
+
+        const promptInputVal = promptInput.value.trim() || "";
+        
+        // Prepare variables to be cleared
+        let screenshotUrl = null;
+        let pageText = null;
 
         try {
-            // Capture Screenshot
-            const screenshotUrl = await captureTab();
+            // Parallel Capture based on selection
+            const promises = [];
+            if (useScreenshot) promises.push(captureTab()); else promises.push(Promise.resolve(null));
+            if (usePageText) promises.push(scrapePageText()); else promises.push(Promise.resolve(""));
+
+            const [capturedUrl, capturedText] = await Promise.all(promises);
             
-            // Trigger explanations (Parallel)
-            chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey'], (keys) => {
+            screenshotUrl = capturedUrl;
+            pageText = capturedText;
+            
+            // Construct context-rich prompt
+            let finalPrompt = "";
+            let promptDisplay = ""; // For the UI view
+
+            if (promptInputVal) {
+                finalPrompt = `Instruction: ${promptInputVal}`;
+                promptDisplay = `Instruction: ${promptInputVal}`;
+            } else {
+                finalPrompt = `Explain this page.`;
+                promptDisplay = `Explain this page.`;
+            }
+
+            if (pageText) {
+                finalPrompt += `\n\nContext from Page Text:\n${pageText.substring(0, 3000)}...`;
+                promptDisplay += `\n\n[Attached Page Text: ${pageText.length} chars (truncated in view)]`;
+            }
+            
+            if (screenshotUrl) {
+                promptDisplay += `\n[Attached Screenshot: Yes]`;
+            } else {
+                promptDisplay += `\n[Attached Screenshot: No]`;
+            }
+
+            // Update Query View
+            document.getElementById('query-content').textContent = promptDisplay;
+
+            // Fetch keys using await (Promise-based in MV3)
+            const keys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'deepseekKey']);
+
+            // Trigger explanations (Fire and forget, don't await completion to keep UI parallel)
+            if((!targetServices || targetServices.includes('gemini'))) {
                 if(keys.geminiKey) {
-                    callGemini(keys.geminiKey, screenshotUrl)
+                    callGemini(keys.geminiKey, screenshotUrl, finalPrompt)
                         .then(text => updateSection('gemini-section', classFormatMarkdown(text)))
                         .catch(err => updateSection('gemini-section', 'Error: ' + err.message));
                 } else {
                     updateSection('gemini-section', 'API Key not configured.');
                 }
+            }
 
+            if((!targetServices || targetServices.includes('openai'))) {
                 if(keys.openaiKey) {
-                    callOpenAI(keys.openaiKey, screenshotUrl)
-                         .then(text => updateSection('openai-section', classFormatMarkdown(text)))
-                         .catch(err => updateSection('openai-section', 'Error: ' + err.message));
+                    callOpenAI(keys.openaiKey, screenshotUrl, finalPrompt)
+                            .then(text => updateSection('openai-section', classFormatMarkdown(text)))
+                            .catch(err => updateSection('openai-section', 'Error: ' + err.message));
                 } else {
                     updateSection('openai-section', 'API Key not configured.');
                 }
+            }
 
+            if((!targetServices || targetServices.includes('anthropic'))) {
                 if(keys.anthropicKey) {
-                    callAnthropic(keys.anthropicKey, screenshotUrl)
+                    callAnthropic(keys.anthropicKey, screenshotUrl, finalPrompt)
                         .then(text => updateSection('anthropic-section', classFormatMarkdown(text)))
                         .catch(err => updateSection('anthropic-section', 'Error: ' + err.message));
                 } else {
                     updateSection('anthropic-section', 'API Key not configured.');
                 }
-            });
+            }
+            
+            if((!targetServices || targetServices.includes('deepseek'))) {
+                if(keys.deepseekKey) {
+                     // Note: Passing screenshotUrl to DeepSeek, but service might ignore it if V3 text-only
+                    callDeepSeek(keys.deepseekKey, screenshotUrl, finalPrompt)
+                        .then(text => updateSection('deepseek-section', classFormatMarkdown(text)))
+                        .catch(err => updateSection('deepseek-section', 'Error: ' + err.message));
+                } else {
+                    updateSection('deepseek-section', 'API Key not configured.');
+                }
+            }
 
         } catch (err) {
-            if (err.message.includes("Cannot capture")) {
-                console.warn("Known limitation:", err.message);
-            } else {
-                console.error(err);
-            }
-            updateSection('gemini-section', 'Error capturing tab: ' + err.message);
+            console.error(err); // Log detailed error
+            let msg = err.message;
+            if (msg.includes("Cannot capture")) msg = "Could not capture page. Try reloading.";
+            
+            // Show error in all active targets
+             if (!targetServices || targetServices.includes('gemini')) updateSection('gemini-section', 'Error: ' + msg);
+             // Others might fail too, but usually this capture error affects all
+             if (!targetServices || targetServices.includes('deepseek')) updateSection('deepseek-section', 'Error: ' + msg);
+        } finally {
+            // Auto-cleanup memory
+            // Immediate cleanup is safe now because we awaited storage and initiated calls
+            screenshotUrl = null;
+            pageText = null;
         }
     };
+    
+    async function scrapePageText() {
+        return new Promise((resolve) => {
+             chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                if (!tabs || tabs.length === 0) return resolve("");
+                chrome.scripting.executeScript({
+                    target: {tabId: tabs[0].id},
+                    func: () => document.body.innerText
+                }, (results) => {
+                    if (chrome.runtime.lastError || !results || !results[0]) {
+                        resolve(""); // Fail silently or return empty text
+                    } else {
+                        resolve(results[0].result || "");
+                    }
+                });
+             });
+        });
+    }
 
     // Auto-Refresh Logic
     let debounceTimer;

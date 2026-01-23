@@ -1,8 +1,24 @@
-export async function callAnthropic(apiKey, base64Image) {
+export async function callAnthropic(apiKey, base64Image, prompt = "explain") {
     const url = 'https://api.anthropic.com/v1/messages';
     
-    // Remove header if present
-    const base64Data = base64Image.split(',')[1];
+    const content = [];
+    
+    if (base64Image) {
+        const base64Data = base64Image.split(',')[1];
+        content.push({
+            type: "image",
+            source: {
+                type: "base64",
+                media_type: "image/jpeg",
+                data: base64Data
+            }
+        });
+    }
+
+    content.push({
+        type: "text",
+        text: prompt
+    });
 
     const payload = {
       model: "claude-3-5-sonnet-20240620",
@@ -10,20 +26,7 @@ export async function callAnthropic(apiKey, base64Image) {
       messages: [
         {
           role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: "image/jpeg",
-                data: base64Data
-              }
-            },
-            {
-              type: "text",
-              text: "explain"
-            }
-          ]
+          content: content
         }
       ]
     };
