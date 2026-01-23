@@ -25,14 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const geminiKeyInput = document.getElementById('gemini-key');
     const openaiKeyInput = document.getElementById('openai-key');
     const anthropicKeyInput = document.getElementById('anthropic-key');
+    const grokKeyInput = document.getElementById('grok-key');
     const deepseekKeyInput = document.getElementById('deepseek-key');
     const licenseKeyInput = document.getElementById('license-key');
 
     // Load Settings & Theme
-    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'deepseekKey', 'theme', 'licenseKey', 'history'], (result) => {
+    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey', 'theme', 'licenseKey', 'history'], (result) => {
         if (result.geminiKey) geminiKeyInput.value = result.geminiKey;
         if (result.openaiKey) openaiKeyInput.value = result.openaiKey;
         if (result.anthropicKey) anthropicKeyInput.value = result.anthropicKey;
+        if (result.grokKey) grokKeyInput.value = result.grokKey;
         if (result.deepseekKey) deepseekKeyInput.value = result.deepseekKey;
         if (result.licenseKey) licenseKeyInput.value = result.licenseKey;
 
@@ -128,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             geminiKey: geminiKeyInput.value.trim(),
             openaiKey: openaiKeyInput.value.trim(),
             anthropicKey: anthropicKeyInput.value.trim(),
-            anthropicKey: anthropicKeyInput.value.trim(),
+            grokKey: grokKeyInput.value.trim(),
             deepseekKey: deepseekKeyInput.value.trim(),
             licenseKey: licenseKeyInput.value.trim()
         };
@@ -316,6 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!targetServices || targetServices.includes('gemini')) updateSection('gemini-section', 'Loading...');
         if (!targetServices || targetServices.includes('openai')) updateSection('openai-section', 'Loading...');
         if (!targetServices || targetServices.includes('anthropic')) updateSection('anthropic-section', 'Loading...');
+        if (!targetServices || targetServices.includes('grok')) updateSection('grok-section', 'Loading...');
         if (!targetServices || targetServices.includes('deepseek')) updateSection('deepseek-section', 'Loading...');
 
         const promptInputVal = promptInput.value.trim() || "";
@@ -362,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('query-content').textContent = promptDisplay;
 
             // Fetch keys using await (Promise-based in MV3)
-            const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'deepseekKey']);
+            const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey']);
 
             // Merge storage keys with hardcoded config keys (Storage takes precedence if user set one, otherwise Config)
             // OR user might want Config to override? Usually Hardcode = Default.
@@ -372,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 geminiKey: storageKeys.geminiKey || API_CONFIG.geminiKey,
                 openaiKey: storageKeys.openaiKey || API_CONFIG.openaiKey,
                 anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
+                grokKey: storageKeys.grokKey || API_CONFIG.grokKey,
                 deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey
             };
 
@@ -416,6 +420,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         .catch(err => updateSection('anthropic-section', 'Error: ' + err.message));
                 } else {
                     updateSection('anthropic-section', 'API Key not configured.');
+                }
+            }
+
+            if ((!targetServices || targetServices.includes('grok'))) {
+                if (!isPro()) {
+                    updateSection('grok-section', getLockOverlayHTML('Grok AI'));
+                } else if (keys.grokKey) {
+                    // Placeholder for Grok - API integration to be added
+                    updateSection('grok-section', 'Grok API integration coming soon. Please configure your API key in settings.');
+                } else {
+                    updateSection('grok-section', 'API Key not configured.');
                 }
             }
 
@@ -650,6 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (item.service === 'ChatGPT') sectionId = 'openai-section';
                 if (item.service === 'Claude') sectionId = 'anthropic-section';
                 if (item.service === 'Gemini') sectionId = 'gemini-section';
+                if (item.service === 'Grok') sectionId = 'grok-section';
                 if (item.service === 'DeepSeek') sectionId = 'deepseek-section';
 
                 switchTab(sectionId);

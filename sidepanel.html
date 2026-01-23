@@ -38,10 +38,18 @@
                     </div>
                 </div>
 
-                <div class="chips">
-                    <button class="chip" data-prompt="Summarize this">Summary</button>
-                    <button class="chip" data-prompt="Give commentary on this">Commentary</button>
-                    <button class="chip" data-prompt="Track my work based on this">Track Work</button>
+                <div class="chips-container">
+                    <div class="chips">
+                        <button class="chip" data-prompt="Summarize this" title="Get a quick summary">Summary</button>
+                        <button class="chip" data-prompt="Guide me through learning this"
+                            title="Learn step-by-step">Guided Learning</button>
+                        <button class="chip" data-prompt="Do a deep research on this"
+                            title="Deep research analysis">Deep Research</button>
+                        <button class="chip" data-prompt="Track my work based on this" title="Track your progress">Track
+                            Work</button>
+                        <button class="chip" data-prompt="Give commentary on this"
+                            title="Get detailed commentary">Commentary</button>
+                    </div>
 
                     <div class="header-actions">
                         <button id="theme-toggle" class="icon-action-btn" title="Toggle Theme">🌙</button>
@@ -52,11 +60,14 @@
                 <button id="explain-btn" class="hidden">Explain Page</button>
 
                 <div class="tabs">
-                    <button class="tab-btn" data-tab="deepseek-section">🦈 DeepSeek</button>
-                    <button class="tab-btn active" data-tab="gemini-section">✨ Gemini</button>
-                    <button class="tab-btn" data-tab="openai-section">🤖 ChatGPT</button>
-                    <button class="tab-btn" data-tab="anthropic-section">🧠 Claude</button>
-                    <button class="tab-btn" data-tab="history-section">📜 History</button>
+                    <button class="tab-btn active" data-tab="openai-section" title="ChatGPT by OpenAI">🤖
+                        ChatGPT</button>
+                    <button class="tab-btn" data-tab="gemini-section" title="Gemini by Google">✨ Gemini</button>
+                    <button class="tab-btn" data-tab="anthropic-section" title="Claude by Anthropic">🧠 Claude</button>
+                    <button class="tab-btn" data-tab="grok-section" title="Grok by xAI">🤘 Grok</button>
+                    <button class="tab-btn" data-tab="deepseek-section" title="DeepSeek AI">🦈 DeepSeek</button>
+                    <button class="tab-btn" data-tab="history-section" title="View conversation history">📜
+                        History</button>
                 </div>
 
                 <details id="query-details">
@@ -72,8 +83,8 @@
                     <div class="section-header">
                         <h3>Gemini Response</h3>
                         <div class="header-actions-small">
-                            <button class="refresh-btn" data-target="gemini">🔄</button>
-                            <button class="config-btn" data-target="gemini-key">⚙️</button>
+                            <button class="refresh-btn" data-target="gemini" title="Refresh response">🔄</button>
+                            <button class="config-btn" data-target="gemini-key" title="Configure API key">⚙️</button>
                         </div>
                     </div>
                     <div class="content"></div>
@@ -82,8 +93,8 @@
                     <div class="section-header">
                         <h3>ChatGPT Response</h3>
                         <div class="header-actions-small">
-                            <button class="refresh-btn" data-target="openai">🔄</button>
-                            <button class="config-btn" data-target="openai-key">⚙️</button>
+                            <button class="refresh-btn" data-target="openai" title="Refresh response">🔄</button>
+                            <button class="config-btn" data-target="openai-key" title="Configure API key">⚙️</button>
                         </div>
                     </div>
                     <div class="content"></div>
@@ -92,8 +103,18 @@
                     <div class="section-header">
                         <h3>Claude Response</h3>
                         <div class="header-actions-small">
-                            <button class="refresh-btn" data-target="anthropic">🔄</button>
-                            <button class="config-btn" data-target="anthropic-key">⚙️</button>
+                            <button class="refresh-btn" data-target="anthropic" title="Refresh response">🔄</button>
+                            <button class="config-btn" data-target="anthropic-key" title="Configure API key">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="content"></div>
+                </div>
+                <div class="result-section" id="grok-section">
+                    <div class="section-header">
+                        <h3>Grok Response</h3>
+                        <div class="header-actions-small">
+                            <button class="refresh-btn" data-target="grok" title="Refresh response">🔄</button>
+                            <button class="config-btn" data-target="grok-key" title="Configure API key">⚙️</button>
                         </div>
                     </div>
                     <div class="content"></div>
@@ -102,8 +123,8 @@
                     <div class="section-header">
                         <h3>DeepSeek Response</h3>
                         <div class="header-actions-small">
-                            <button class="refresh-btn" data-target="deepseek">🔄</button>
-                            <button class="config-btn" data-target="deepseek-key">⚙️</button>
+                            <button class="refresh-btn" data-target="deepseek" title="Refresh response">🔄</button>
+                            <button class="config-btn" data-target="deepseek-key" title="Configure API key">⚙️</button>
                         </div>
                     </div>
                     <div class="content"></div>
@@ -139,7 +160,7 @@
             <div class="input-group">
                 <div class="label-row">
                     <label for="gemini-key">Gemini API Key (Free)</label>
-                    <button class="paste-btn" data-target="gemini-key">Paste Key</button>
+                    <button class="paste-btn" data-target="gemini-key" title="Paste from clipboard">Paste Key</button>
                 </div>
                 <input type="password" id="gemini-key" placeholder="Enter Gemini API Key">
             </div>
@@ -147,7 +168,7 @@
             <div class="input-group">
                 <div class="label-row">
                     <label for="license-key" style="color: var(--primary-color);">Lumina Pro License</label>
-                    <a href="#" class="help-link" id="buy-license-link">Get Pro</a>
+                    <a href="#" class="help-link" id="buy-license-link" title="Purchase Lumina Pro">Get Pro</a>
                 </div>
                 <input type="text" id="license-key" placeholder="Enter Key (e.g. LUMINA-PRO-XXX)">
             </div>
@@ -160,28 +181,39 @@
                 <div class="input-group">
                     <div class="label-row">
                         <label for="openai-key">OpenAI API Key</label>
-                        <button class="paste-btn" data-target="openai-key">Paste Key</button>
+                        <button class="paste-btn" data-target="openai-key" title="Paste from clipboard">Paste
+                            Key</button>
                     </div>
                     <input type="password" id="openai-key" placeholder="Enter OpenAI API Key">
                 </div>
                 <div class="input-group">
                     <div class="label-row">
                         <label for="anthropic-key">Anthropic API Key</label>
-                        <button class="paste-btn" data-target="anthropic-key">Paste Key</button>
+                        <button class="paste-btn" data-target="anthropic-key" title="Paste from clipboard">Paste
+                            Key</button>
                     </div>
                     <input type="password" id="anthropic-key" placeholder="Enter Anthropic API Key">
                 </div>
                 <div class="input-group">
                     <div class="label-row">
+                        <label for="grok-key">Grok API Key</label>
+                        <button class="paste-btn" data-target="grok-key" title="Paste from clipboard">Paste Key</button>
+                    </div>
+                    <input type="password" id="grok-key" placeholder="Enter Grok API Key">
+                </div>
+                <div class="input-group">
+                    <div class="label-row">
                         <label for="deepseek-key">DeepSeek API Key</label>
-                        <button class="paste-btn" data-target="deepseek-key">Paste Key</button>
+                        <button class="paste-btn" data-target="deepseek-key" title="Paste from clipboard">Paste
+                            Key</button>
                     </div>
                     <input type="password" id="deepseek-key" placeholder="Enter DeepSeek API Key">
                 </div>
             </div>
 
-            <button id="save-settings-btn" class="secondary-btn" style="margin-top: 15px;">Save</button>
-            <button id="back-btn" class="text-btn">Back</button>
+            <button id="save-settings-btn" class="secondary-btn" style="margin-top: 15px;"
+                title="Save all settings">Save</button>
+            <button id="back-btn" class="text-btn" title="Return to main view">Back</button>
         </div>
     </div>
     <script type="module" src="sidepanel.js"></script>

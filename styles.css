@@ -265,7 +265,12 @@ h1 {
   font-size: 0.85rem;
   color: var(--secondary-text);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--border-radius);
+  /* Match result card radius */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  /* Enhanced shadow */
+  overflow: hidden;
+  /* Clip child corners to match parent radius */
 }
 
 #query-details summary {
@@ -499,10 +504,29 @@ h1 {
   display: flex;
   border-bottom: 1px solid var(--border-color);
   margin-bottom: var(--spacing);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) transparent;
+}
+
+.tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 2px;
+}
+
+.tabs::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .tab-btn {
-  flex: 1;
+  flex: 0 0 auto;
+  white-space: nowrap;
   padding: 10px;
   background: none;
   border: none;
@@ -531,7 +555,8 @@ h1 {
   background: var(--card-bg);
   padding: 8px;
   border-radius: var(--border-radius);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  /* Enhanced shadow */
   animation: fadeIn 0.15s ease-in-out;
   position: relative;
   /* For Pro overlay positioning */
@@ -558,14 +583,44 @@ h1 {
   }
 }
 
+/* Container for chips and header actions */
+.chips-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
 .chips {
   display: flex;
-  justify-content: space-between;
-  /* Push header-actions to right */
+  justify-content: flex-start;
+  /* Align chips to left */
   align-items: center;
   gap: 8px;
   overflow-x: auto;
+  /* Enable horizontal scroll */
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  /* Smooth scrolling */
   padding-bottom: 4px;
+  scrollbar-width: thin;
+  /* Firefox - thin scrollbar */
+  flex: 1;
+  /* Take available space */
+}
+
+/* Webkit scrollbar styling for chips */
+.chips::-webkit-scrollbar {
+  height: 4px;
+}
+
+.chips::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+.chips::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .chip {
