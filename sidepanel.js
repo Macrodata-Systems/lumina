@@ -26,13 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const openaiKeyInput = document.getElementById('openai-key');
     const anthropicKeyInput = document.getElementById('anthropic-key');
     const deepseekKeyInput = document.getElementById('deepseek-key');
+    const licenseKeyInput = document.getElementById('license-key');
 
     // Load Settings & Theme
-    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'deepseekKey', 'theme'], (result) => {
+    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'deepseekKey', 'theme', 'licenseKey', 'history'], (result) => {
         if (result.geminiKey) geminiKeyInput.value = result.geminiKey;
         if (result.openaiKey) openaiKeyInput.value = result.openaiKey;
         if (result.anthropicKey) anthropicKeyInput.value = result.anthropicKey;
         if (result.deepseekKey) deepseekKeyInput.value = result.deepseekKey;
+        if (result.licenseKey) licenseKeyInput.value = result.licenseKey;
+        
+        // Initialize history
+        window.historyData = result.history || [];
         
         // Apply saved theme or default to light
         const currentTheme = result.theme || 'dark';
@@ -104,6 +109,17 @@ document.addEventListener('DOMContentLoaded', () => {
              const input = document.getElementById(focusId);
              if (input) setTimeout(() => input.focus(), 100);
         }
+        
+        updateProSettingsVisibility();
+    }
+
+    function updateProSettingsVisibility() {
+        const proSettings = document.getElementById('pro-model-settings');
+        if (isPro()) {
+            proSettings.classList.remove('hidden');
+        } else {
+            proSettings.classList.add('hidden');
+        }
     }
 
     // Save Settings
@@ -112,10 +128,13 @@ document.addEventListener('DOMContentLoaded', () => {
             geminiKey: geminiKeyInput.value.trim(),
             openaiKey: openaiKeyInput.value.trim(),
             anthropicKey: anthropicKeyInput.value.trim(),
-            deepseekKey: deepseekKeyInput.value.trim()
+            anthropicKey: anthropicKeyInput.value.trim(),
+            deepseekKey: deepseekKeyInput.value.trim(),
+            licenseKey: licenseKeyInput.value.trim()
         };
         chrome.storage.local.set(keys, () => {
             alert('Settings saved!');
+            updateProSettingsVisibility(); // Update UI immediately
             backBtn.click();
         });
     });
@@ -130,6 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
              switchTab(targetId);
         });
     });
+
 
     function switchTab(tabId) {
         // specific tab button
@@ -149,6 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 sec.classList.remove('active-section');
             }
         });
+
+        if (tabId === 'history-section') {
+            renderHistory();
+        }
     }
 
     // Prompt Logic
@@ -355,7 +379,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if((!targetServices || targetServices.includes('gemini'))) {
                 if(keys.geminiKey) {
                     callGemini(keys.geminiKey, screenshotUrl, finalPrompt)
-                        .then(text => updateSection('gemini-section', classFormatMarkdown(text)))
+                        .then(text => {
+                            updateSection('gemini-section', classFormatMarkdown(text));
+                            saveToHistory(finalPrompt, text, 'Gemini');
+                        })
                         .catch(err => updateSection('gemini-section', 'Error: ' + err.message));
                 } else {
                     updateSection('gemini-section', 'API Key not configured.');
@@ -363,9 +390,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if((!targetServices || targetServices.includes('openai'))) {
-                if(keys.openaiKey) {
+                if (!isPro()) {
+                     updateSection('openai-section', '🔒 <strong>Pro Feature</strong><br>Upgrade to use ChatGPT 4o.');
+                } else if(keys.openaiKey) {
                     callOpenAI(keys.openaiKey, screenshotUrl, finalPrompt)
-                            .then(text => updateSection('openai-section', classFormatMarkdown(text)))
+                            .then(text => {
+                                updateSection('openai-section', classFormatMarkdown(text));
+                                saveToHistory(finalPrompt, text, 'ChatGPT');
+                            })
                             .catch(err => updateSection('openai-section', 'Error: ' + err.message));
                 } else {
                     updateSection('openai-section', 'API Key not configured.');
@@ -373,9 +405,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if((!targetServices || targetServices.includes('anthropic'))) {
-                if(keys.anthropicKey) {
+                if (!isPro()) {
+                     updateSection('anthropic-section', '🔒 <strong>Pro Feature</strong><br>Upgrade to use Claude 3.5 Sonnet.');
+                } else if(keys.anthropicKey) {
                     callAnthropic(keys.anthropicKey, screenshotUrl, finalPrompt)
-                        .then(text => updateSection('anthropic-section', classFormatMarkdown(text)))
+                        .then(text => {
+                            updateSection('anthropic-section', classFormatMarkdown(text));
+                            saveToHistory(finalPrompt, text, 'Claude');
+                        })
                         .catch(err => updateSection('anthropic-section', 'Error: ' + err.message));
                 } else {
                     updateSection('anthropic-section', 'API Key not configured.');
@@ -383,7 +420,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if((!targetServices || targetServices.includes('deepseek'))) {
-                if(keys.deepseekKey) {
+                if (!isPro()) {
+                     updateSection('deepseek-section', '🔒 <strong>Pro Feature</strong><br>Upgrade to use DeepSeek R1.');
+                } else if(keys.deepseekKey) {
                      // Streaming implementation for DeepSeek
                     callDeepSeek(keys.deepseekKey, screenshotUrl, finalPrompt, (partial) => {
                         const { reasoning, content } = partial;
@@ -415,6 +454,8 @@ document.addEventListener('DOMContentLoaded', () => {
                          // but we might want to ensure 'Loading...' is cleared if empty.
                          if (!finalResult.content && !finalResult.reasoning) {
                              updateSection('deepseek-section', 'No content returned.');
+                         } else {
+                             saveToHistory(finalPrompt, finalResult.content, 'DeepSeek');
                          }
                     })
                     .catch(err => updateSection('deepseek-section', 'Error: ' + err.message));
@@ -535,4 +576,103 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+    /* History & License Logic */
+    
+    function isPro() {
+        const key = licenseKeyInput.value.trim();
+        return key.startsWith('LUMINA-PRO') || key.startsWith('TEST');
+    }
+
+    function saveToHistory(prompt, response, service) {
+        if (!prompt || !response) return;
+        
+        const newItem = {
+            id: Date.now(),
+            date: new Date().toISOString(),
+            prompt: prompt,
+            response: response, 
+            service: service
+        };
+
+        // Add to local array
+        window.historyData = [newItem, ...(window.historyData || [])];
+        
+        // Limit to 50 items
+        if (window.historyData.length > 50) {
+            window.historyData = window.historyData.slice(0, 50);
+        }
+
+        chrome.storage.local.set({ history: window.historyData });
+    }
+
+    function renderHistory() {
+        const container = document.querySelector('.history-list-container');
+        const overlay = document.getElementById('pro-overlay');
+        
+        if (!isPro()) {
+             overlay.classList.remove('hidden');
+             // Show empty or blurred items?
+             // Render a fake background of items to look cool behind the blur
+             renderHistoryItems(container, window.historyData || [], true);
+             return;
+        } else {
+             overlay.classList.add('hidden');
+        }
+
+        renderHistoryItems(container, window.historyData || []);
+    }
+
+    function renderHistoryItems(container, items, blur = false) {
+        container.innerHTML = '';
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="empty-state">No history yet. Start explaining things!</div>';
+            return;
+        }
+
+        items.forEach(item => {
+            const dateStr = new Date(item.date).toLocaleString();
+            const el = document.createElement('div');
+            el.className = 'history-item';
+            el.innerHTML = `
+                <div class="history-date">${dateStr} • ${item.service}</div>
+                <div class="history-prompt">${item.prompt.replace(/Instruction: /, "").replace(/Instruction: /, "")}</div>
+                <div class="history-preview">${item.response.substring(0, 150)}...</div>
+            `;
+            
+            el.addEventListener('click', () => {
+                if(!isPro()) return; 
+                // Load into view
+                const tabId = item.service.toLowerCase() + '-section';
+                // Map service name to section ID if needed (ChatGPT -> openai)
+                let sectionId = tabId;
+                if(item.service === 'ChatGPT') sectionId = 'openai-section';
+                if(item.service === 'Claude') sectionId = 'anthropic-section';
+                if(item.service === 'Gemini') sectionId = 'gemini-section';
+                if(item.service === 'DeepSeek') sectionId = 'deepseek-section';
+
+                switchTab(sectionId);
+                updateSection(sectionId, classFormatMarkdown(item.response)); 
+            });
+
+            container.appendChild(el);
+        });
+    }
+
+    // "Get Pro" link
+    document.getElementById('buy-license-link').addEventListener('click', () => {
+        chrome.tabs.create({ url: 'https://gumroad.com/l/lumina-pro-demo' }); 
+    });
+    
+    document.getElementById('unlock-pro-btn').addEventListener('click', () => {
+        openSettings('license-key');
+    });
+
+    document.getElementById('clear-history-btn').addEventListener('click', () => {
+        if(confirm('Clear all history?')) {
+            window.historyData = [];
+            chrome.storage.local.set({ history: [] });
+            renderHistory();
+        }
+    });
+
 });
