@@ -687,9 +687,9 @@ document.addEventListener('DOMContentLoaded', () => {
             openSettings('license-key');
         }
 
-        // Handle pro modal close button - switch to ChatGPT (default)
+        // Handle pro modal close button - switch to Gemini (safe fallback)
         if (e.target && e.target.classList.contains('pro-close-btn')) {
-            switchTab('openai-section');
+            switchTab('gemini-section');
         }
     });
 
