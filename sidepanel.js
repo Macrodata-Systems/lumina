@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const backBtn = document.getElementById('back-btn');
     const saveSettingsBtn = document.getElementById('save-settings-btn');
     const explainBtn = document.getElementById('explain-btn');
-    
+
     const themeToggleBtn = document.getElementById('theme-toggle');
 
     // Inputs
@@ -35,10 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result.anthropicKey) anthropicKeyInput.value = result.anthropicKey;
         if (result.deepseekKey) deepseekKeyInput.value = result.deepseekKey;
         if (result.licenseKey) licenseKeyInput.value = result.licenseKey;
-        
+
         // Initialize history
         window.historyData = result.history || [];
-        
+
         // Apply saved theme or default to light
         const currentTheme = result.theme || 'dark';
         applyTheme(currentTheme);
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
         chrome.storage.local.set({ theme });
-        
+
         // Update Icon: Sun for Dark Mode (to switch to light), Moon for Light Mode
         if (theme === 'dark') {
             themeToggleBtn.innerHTML = '☀️';
@@ -72,14 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsView.classList.add('hidden');
         mainView.classList.remove('hidden');
         settingsBtn.classList.remove('hidden');
-        document.querySelector('.header-actions').classList.remove('hidden'); 
+        document.querySelector('.header-actions').classList.remove('hidden');
     });
 
     // Config Buttons Logic
     document.querySelectorAll('.config-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-             const targetId = btn.getAttribute('data-target');
-             openSettings(targetId);
+            const targetId = btn.getAttribute('data-target');
+            openSettings(targetId);
         });
     });
 
@@ -106,10 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Focus the input if specific one requested
         if (focusId) {
-             const input = document.getElementById(focusId);
-             if (input) setTimeout(() => input.focus(), 100);
+            const input = document.getElementById(focusId);
+            if (input) setTimeout(() => input.focus(), 100);
         }
-        
+
         updateProSettingsVisibility();
     }
 
@@ -145,8 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-             const targetId = btn.getAttribute('data-tab');
-             switchTab(targetId);
+            const targetId = btn.getAttribute('data-tab');
+            switchTab(targetId);
         });
     });
 
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function switchTab(tabId) {
         // specific tab button
         tabBtns.forEach(btn => {
-            if(btn.getAttribute('data-tab') === tabId) {
+            if (btn.getAttribute('data-tab') === tabId) {
                 btn.classList.add('active');
             } else {
                 btn.classList.remove('active');
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // specific section
         resultSections.forEach(sec => {
-            if(sec.id === tabId) {
+            if (sec.id === tabId) {
                 sec.classList.add('active-section');
             } else {
                 sec.classList.remove('active-section');
@@ -197,11 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Refresh Buttons Logic
     document.querySelectorAll('.refresh-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-             e.stopPropagation(); // prevent collapsing if we were in a specialized header
-             const target = btn.getAttribute('data-target');
-             if(target) {
-                 startExplanation([target]);
-             }
+            e.stopPropagation(); // prevent collapsing if we were in a specialized header
+            const target = btn.getAttribute('data-target');
+            if (target) {
+                startExplanation([target]);
+            }
         });
     });
 
@@ -230,8 +230,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     togglePageTextBtn.addEventListener('click', () => {
-       usePageText = !usePageText;
-       updateToggleUI();
+        usePageText = !usePageText;
+        updateToggleUI();
     });
 
     // Audio Input (Web Speech API)
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.onerror = (event) => {
             console.error("Speech Error:", event.error);
             micBtn.classList.remove('listening');
-            
+
             if (event.error === 'not-allowed' || event.error === 'permission-denied') {
                 alert("Microphone access blocked. Please go to extension settings (chrome://extensions), find Lumina, and ensure microphone permission is allowed, or check your OS settings.");
             } else if (event.error === 'no-speech') {
@@ -279,21 +279,21 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTextBtn.addEventListener('click', async () => {
         loadTextBtn.style.opacity = '0.5';
         const text = await scrapePageText();
-        if(text) {
-             // promptInput.value += "\n\n" + text; // Append or Replace? User asked to "load it on the prompt box"
-             // Usually replacing or filling is better context. Let's append if exists.
-             promptInput.value = text; // "load it on the prompt box" implies populating it
-             loadTextBtn.style.color = 'var(--primary-color)';
-             setTimeout(() => {
-                 loadTextBtn.style.color = '';
-                 loadTextBtn.style.opacity = '1';
-             }, 1000);
+        if (text) {
+            // promptInput.value += "\n\n" + text; // Append or Replace? User asked to "load it on the prompt box"
+            // Usually replacing or filling is better context. Let's append if exists.
+            promptInput.value = text; // "load it on the prompt box" implies populating it
+            loadTextBtn.style.color = 'var(--primary-color)';
+            setTimeout(() => {
+                loadTextBtn.style.color = '';
+                loadTextBtn.style.opacity = '1';
+            }, 1000);
         } else {
             alert("Could not extract text.");
-             loadTextBtn.style.opacity = '1';
+            loadTextBtn.style.opacity = '1';
         }
     });
-    
+
     // Send Button
     sendBtn.addEventListener('click', () => startExplanation());
 
@@ -304,14 +304,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // useScreenshot and usePageText are now global module vars updated by buttons
 
         if (!useScreenshot && !usePageText) {
-             updateSection('gemini-section', 'Please select at least one source (Screenshot or Page Text).');
-             return;
+            updateSection('gemini-section', 'Please select at least one source (Screenshot or Page Text).');
+            return;
         }
 
         const resultsContainer = document.getElementById('results-container');
         resultsContainer.classList.remove('hidden');
-        explainBtn.classList.add('hidden'); 
-        
+        explainBtn.classList.add('hidden');
+
         // Only show loading for targets
         if (!targetServices || targetServices.includes('gemini')) updateSection('gemini-section', 'Loading...');
         if (!targetServices || targetServices.includes('openai')) updateSection('openai-section', 'Loading...');
@@ -319,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!targetServices || targetServices.includes('deepseek')) updateSection('deepseek-section', 'Loading...');
 
         const promptInputVal = promptInput.value.trim() || "";
-        
+
         // Prepare variables to be cleared
         let screenshotUrl = null;
         let pageText = null;
@@ -331,10 +331,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (usePageText) promises.push(scrapePageText()); else promises.push(Promise.resolve(""));
 
             const [capturedUrl, capturedText] = await Promise.all(promises);
-            
+
             screenshotUrl = capturedUrl;
             pageText = capturedText;
-            
+
             // Construct context-rich prompt
             let finalPrompt = "";
             let promptDisplay = ""; // For the UI view
@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 finalPrompt += `\n\nContext from Page Text:\n${pageText.substring(0, 3000)}...`;
                 promptDisplay += `\n\n[Attached Page Text: ${pageText.length} chars (truncated in view)]`;
             }
-            
+
             if (screenshotUrl) {
                 promptDisplay += `\n[Attached Screenshot: Yes]`;
             } else {
@@ -376,8 +376,8 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             // Trigger explanations (Fire and forget, don't await completion to keep UI parallel)
-            if((!targetServices || targetServices.includes('gemini'))) {
-                if(keys.geminiKey) {
+            if ((!targetServices || targetServices.includes('gemini'))) {
+                if (keys.geminiKey) {
                     callGemini(keys.geminiKey, screenshotUrl, finalPrompt)
                         .then(text => {
                             updateSection('gemini-section', classFormatMarkdown(text));
@@ -389,25 +389,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if((!targetServices || targetServices.includes('openai'))) {
+            if ((!targetServices || targetServices.includes('openai'))) {
                 if (!isPro()) {
-                     updateSection('openai-section', getLockOverlayHTML('ChatGPT 4o'));
-                } else if(keys.openaiKey) {
+                    updateSection('openai-section', getLockOverlayHTML('ChatGPT 4o'));
+                } else if (keys.openaiKey) {
                     callOpenAI(keys.openaiKey, screenshotUrl, finalPrompt)
-                            .then(text => {
-                                updateSection('openai-section', classFormatMarkdown(text));
-                                saveToHistory(finalPrompt, text, 'ChatGPT');
-                            })
-                            .catch(err => updateSection('openai-section', 'Error: ' + err.message));
+                        .then(text => {
+                            updateSection('openai-section', classFormatMarkdown(text));
+                            saveToHistory(finalPrompt, text, 'ChatGPT');
+                        })
+                        .catch(err => updateSection('openai-section', 'Error: ' + err.message));
                 } else {
                     updateSection('openai-section', 'API Key not configured.');
                 }
             }
 
-            if((!targetServices || targetServices.includes('anthropic'))) {
+            if ((!targetServices || targetServices.includes('anthropic'))) {
                 if (!isPro()) {
-                     updateSection('anthropic-section', getLockOverlayHTML('Claude 3.5 Sonnet'));
-                } else if(keys.anthropicKey) {
+                    updateSection('anthropic-section', getLockOverlayHTML('Claude 3.5 Sonnet'));
+                } else if (keys.anthropicKey) {
                     callAnthropic(keys.anthropicKey, screenshotUrl, finalPrompt)
                         .then(text => {
                             updateSection('anthropic-section', classFormatMarkdown(text));
@@ -418,22 +418,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateSection('anthropic-section', 'API Key not configured.');
                 }
             }
-            
-            if((!targetServices || targetServices.includes('deepseek'))) {
+
+            if ((!targetServices || targetServices.includes('deepseek'))) {
                 if (!isPro()) {
-                     updateSection('deepseek-section', getLockOverlayHTML('DeepSeek R1'));
-                } else if(keys.deepseekKey) {
-                     // Streaming implementation for DeepSeek
+                    updateSection('deepseek-section', getLockOverlayHTML('DeepSeek R1'));
+                } else if (keys.deepseekKey) {
+                    // Streaming implementation for DeepSeek
                     callDeepSeek(keys.deepseekKey, screenshotUrl, finalPrompt, (partial) => {
                         const { reasoning, content } = partial;
-                        
+
                         // Preserve detail state if it exists
                         const existingDetails = document.querySelector('#deepseek-section details');
                         const wasOpen = existingDetails ? existingDetails.hasAttribute('open') : true; // Default to open while streaming
-                        
+
                         const answerHtml = classFormatMarkdown(content);
                         let finalHtml = answerHtml;
-                        
+
                         if (reasoning) {
                             const reasoningHtml = `
                                 <div class="reasoning-container">
@@ -445,20 +445,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             `;
                             finalHtml = reasoningHtml + answerHtml;
                         }
-                        
+
                         updateSection('deepseek-section', finalHtml);
                     })
-                    .then(finalResult => {
-                         // Final render to ensure everything is clean (callback covers it, but good for safety)
-                         // We don't strictly need to do anything here if the callback was exhaustive,
-                         // but we might want to ensure 'Loading...' is cleared if empty.
-                         if (!finalResult.content && !finalResult.reasoning) {
-                             updateSection('deepseek-section', 'No content returned.');
-                         } else {
-                             saveToHistory(finalPrompt, finalResult.content, 'DeepSeek');
-                         }
-                    })
-                    .catch(err => updateSection('deepseek-section', 'Error: ' + err.message));
+                        .then(finalResult => {
+                            // Final render to ensure everything is clean (callback covers it, but good for safety)
+                            // We don't strictly need to do anything here if the callback was exhaustive,
+                            // but we might want to ensure 'Loading...' is cleared if empty.
+                            if (!finalResult.content && !finalResult.reasoning) {
+                                updateSection('deepseek-section', 'No content returned.');
+                            } else {
+                                saveToHistory(finalPrompt, finalResult.content, 'DeepSeek');
+                            }
+                        })
+                        .catch(err => updateSection('deepseek-section', 'Error: ' + err.message));
                 } else {
                     updateSection('deepseek-section', 'API Key not configured.');
                 }
@@ -468,31 +468,31 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(err); // Log detailed error
             let msg = err.message;
             if (msg.includes("Cannot capture")) msg = "Could not capture page. Try reloading.";
-            
+
             // Show error in all active targets if they are still "Loading..."
-             if (!targetServices || targetServices.includes('gemini')) {
-                 const el = document.querySelector('#gemini-section .content');
-                 if(el && el.textContent === 'Loading...') updateSection('gemini-section', 'Error: ' + msg);
-             }
-             if (!targetServices || targetServices.includes('deepseek')) {
-                 const el = document.querySelector('#deepseek-section .content');
-                 // For deepseek, if we already streamed something, maybe don't overwrite with error? 
-                 // But if error is fatal, we should.
-                 updateSection('deepseek-section', 'Error: ' + msg);
-             }
+            if (!targetServices || targetServices.includes('gemini')) {
+                const el = document.querySelector('#gemini-section .content');
+                if (el && el.textContent === 'Loading...') updateSection('gemini-section', 'Error: ' + msg);
+            }
+            if (!targetServices || targetServices.includes('deepseek')) {
+                const el = document.querySelector('#deepseek-section .content');
+                // For deepseek, if we already streamed something, maybe don't overwrite with error? 
+                // But if error is fatal, we should.
+                updateSection('deepseek-section', 'Error: ' + msg);
+            }
         } finally {
             // Auto-cleanup memory
             screenshotUrl = null;
             pageText = null;
         }
     };
-    
+
     async function scrapePageText() {
         return new Promise((resolve) => {
-             chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (!tabs || tabs.length === 0) return resolve("");
                 chrome.scripting.executeScript({
-                    target: {tabId: tabs[0].id},
+                    target: { tabId: tabs[0].id },
                     func: () => document.body.innerText
                 }, (results) => {
                     if (chrome.runtime.lastError || !results || !results[0]) {
@@ -501,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         resolve(results[0].result || "");
                     }
                 });
-             });
+            });
         });
     }
 
@@ -510,8 +510,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const triggerRefresh = () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            startExplanation(); 
-        }, 800); 
+            startExplanation();
+        }, 800);
     };
 
     // Listeners for Tab Switching and Navigation
@@ -552,7 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function captureTab() {
         return new Promise((resolve, reject) => {
-            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (!tabs || tabs.length === 0) {
                     reject(new Error("No active tab found."));
                     return;
@@ -560,7 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const activeTab = tabs[0];
                 const windowId = activeTab.windowId;
 
-                chrome.tabs.captureVisibleTab(windowId, {format: 'jpeg', quality: 80}, (dataUrl) => {
+                chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 80 }, (dataUrl) => {
                     if (chrome.runtime.lastError) {
                         const errorMsg = chrome.runtime.lastError.message;
                         if (errorMsg.includes("permission") || errorMsg.includes("activeTab")) {
@@ -577,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     /* History & License Logic */
-    
+
     function isPro() {
         const key = licenseKeyInput.value.trim();
         return key.startsWith('LUMINA-PRO') || key.startsWith('TEST');
@@ -585,18 +585,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveToHistory(prompt, response, service) {
         if (!prompt || !response) return;
-        
+
         const newItem = {
             id: Date.now(),
             date: new Date().toISOString(),
             prompt: prompt,
-            response: response, 
+            response: response,
             service: service
         };
 
         // Add to local array
         window.historyData = [newItem, ...(window.historyData || [])];
-        
+
         // Limit to 50 items
         if (window.historyData.length > 50) {
             window.historyData = window.historyData.slice(0, 50);
@@ -608,17 +608,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderHistory() {
         const container = document.querySelector('.history-list-container');
         const historySection = document.getElementById('history-section');
-        
+
         // Remove existing overlay if any
         const existingOverlay = historySection.querySelector('.pro-overlay');
-        if(existingOverlay) existingOverlay.remove();
-        
+        if (existingOverlay) existingOverlay.remove();
+
         if (!isPro()) {
-             // Append new overlay
-             historySection.insertAdjacentHTML('beforeend', getLockOverlayHTML('Unlimited History'));
-             // Render blurred items
-             renderHistoryItems(container, window.historyData || [], true);
-             return;
+            // Append new overlay
+            historySection.insertAdjacentHTML('beforeend', getLockOverlayHTML('Unlimited History'));
+            // Render blurred items
+            renderHistoryItems(container, window.historyData || [], true);
+            return;
         }
 
         renderHistoryItems(container, window.historyData || []);
@@ -640,20 +640,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="history-prompt">${item.prompt.replace(/Instruction: /, "").replace(/Instruction: /, "")}</div>
                 <div class="history-preview">${item.response.substring(0, 150)}...</div>
             `;
-            
+
             el.addEventListener('click', () => {
-                if(!isPro()) return; 
+                if (!isPro()) return;
                 // Load into view
                 const tabId = item.service.toLowerCase() + '-section';
                 // Map service name to section ID if needed (ChatGPT -> openai)
                 let sectionId = tabId;
-                if(item.service === 'ChatGPT') sectionId = 'openai-section';
-                if(item.service === 'Claude') sectionId = 'anthropic-section';
-                if(item.service === 'Gemini') sectionId = 'gemini-section';
-                if(item.service === 'DeepSeek') sectionId = 'deepseek-section';
+                if (item.service === 'ChatGPT') sectionId = 'openai-section';
+                if (item.service === 'Claude') sectionId = 'anthropic-section';
+                if (item.service === 'Gemini') sectionId = 'gemini-section';
+                if (item.service === 'DeepSeek') sectionId = 'deepseek-section';
 
                 switchTab(sectionId);
-                updateSection(sectionId, classFormatMarkdown(item.response)); 
+                updateSection(sectionId, classFormatMarkdown(item.response));
             });
 
             container.appendChild(el);
@@ -662,18 +662,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // "Get Pro" link
     document.getElementById('buy-license-link').addEventListener('click', () => {
-        chrome.tabs.create({ url: 'https://gumroad.com/l/lumina-pro-demo' }); 
+        chrome.tabs.create({ url: 'https://gumroad.com/l/lumina-pro-demo' });
     });
-    
+
     // Delegation for dynamic unlock buttons
     document.addEventListener('click', (e) => {
-        if(e.target && e.target.classList.contains('unlock-btn')) {
-             openSettings('license-key');
+        if (e.target && e.target.classList.contains('unlock-btn')) {
+            openSettings('license-key');
+        }
+
+        // Handle pro modal close button - switch to Gemini
+        if (e.target && e.target.classList.contains('pro-close-btn')) {
+            switchTab('gemini-section');
         }
     });
 
     document.getElementById('clear-history-btn').addEventListener('click', () => {
-        if(confirm('Clear all history?')) {
+        if (confirm('Clear all history?')) {
             window.historyData = [];
             chrome.storage.local.set({ history: [] });
             renderHistory();
@@ -682,24 +687,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Delegated click for paste buttons
     document.addEventListener('click', async (e) => {
-        if(e.target && e.target.classList.contains('paste-btn')) {
-             try {
-                 const text = await navigator.clipboard.readText();
-                 if(text) {
-                     const targetId = e.target.getAttribute('data-target');
-                     const input = document.getElementById(targetId);
-                     if(input) {
-                         input.value = text;
-                         // Visual feedback
-                         const originalText = e.target.textContent;
-                         e.target.textContent = 'Pasted!';
-                         setTimeout(() => e.target.textContent = originalText, 1000);
-                     }
-                 }
-             } catch(err) {
-                 console.error('Failed to read clipboard', err);
-                 alert('Could not paste. Please paste manually.');
-             }
+        if (e.target && e.target.classList.contains('paste-btn')) {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    const targetId = e.target.getAttribute('data-target');
+                    const input = document.getElementById(targetId);
+                    if (input) {
+                        input.value = text;
+                        // Visual feedback
+                        const originalText = e.target.textContent;
+                        e.target.textContent = 'Pasted!';
+                        setTimeout(() => e.target.textContent = originalText, 1000);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to read clipboard', err);
+                alert('Could not paste. Please paste manually.');
+            }
         }
     });
 });
@@ -707,6 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function getLockOverlayHTML(featureName) {
     return `
     <div class="pro-overlay">
+        <button class="pro-close-btn" title="Go Back">✕</button>
         <div class="pro-lock-content">
             <span class="lock-icon">🔒</span>
             <h3>Lumina Pro</h3>

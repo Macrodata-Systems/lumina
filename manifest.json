@@ -8,7 +8,8 @@
         "activeTab",
         "storage",
         "sidePanel",
-        "scripting"
+        "scripting",
+        "clipboardRead"
     ],
     "host_permissions": [
         "<all_urls>"
