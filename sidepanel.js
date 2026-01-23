@@ -1,3 +1,11 @@
+/*
+ * Lumina - AI Browser Extension
+ * Copyright (c) 2026 Harsh Raj Singh. All Rights Reserved.
+ *
+ * This code is proprietary. Unauthorized copying of this file, via any medium is strictly prohibited.
+ */
+
+import { API_CONFIG } from './config.js';
 import { callGemini } from './services/gemini.js';
 import { callOpenAI } from './services/openai.js';
 import { callAnthropic } from './services/anthropic.js';
@@ -226,6 +234,14 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.onerror = (event) => {
             console.error("Speech Error:", event.error);
             micBtn.classList.remove('listening');
+            
+            if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                alert("Microphone access blocked. Please go to extension settings (chrome://extensions), find Lumina, and ensure microphone permission is allowed, or check your OS settings.");
+            } else if (event.error === 'no-speech') {
+                // Ignore, just stopped listening
+            } else {
+                alert("Voice input error: " + event.error);
+            }
         };
 
         recognition.onend = () => {
@@ -322,7 +338,18 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('query-content').textContent = promptDisplay;
 
             // Fetch keys using await (Promise-based in MV3)
-            const keys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'deepseekKey']);
+            const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'deepseekKey']);
+
+            // Merge storage keys with hardcoded config keys (Storage takes precedence if user set one, otherwise Config)
+            // OR user might want Config to override? Usually Hardcode = Default.
+            // Let's allow Storage to override so the user can still change it in UI if they want, 
+            // but default to Config if Storage is empty.
+            const keys = {
+                geminiKey: storageKeys.geminiKey || API_CONFIG.geminiKey,
+                openaiKey: storageKeys.openaiKey || API_CONFIG.openaiKey,
+                anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
+                deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey
+            };
 
             // Trigger explanations (Fire and forget, don't await completion to keep UI parallel)
             if((!targetServices || targetServices.includes('gemini'))) {
@@ -357,10 +384,40 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if((!targetServices || targetServices.includes('deepseek'))) {
                 if(keys.deepseekKey) {
-                     // Note: Passing screenshotUrl to DeepSeek, but service might ignore it if V3 text-only
-                    callDeepSeek(keys.deepseekKey, screenshotUrl, finalPrompt)
-                        .then(text => updateSection('deepseek-section', classFormatMarkdown(text)))
-                        .catch(err => updateSection('deepseek-section', 'Error: ' + err.message));
+                     // Streaming implementation for DeepSeek
+                    callDeepSeek(keys.deepseekKey, screenshotUrl, finalPrompt, (partial) => {
+                        const { reasoning, content } = partial;
+                        
+                        // Preserve detail state if it exists
+                        const existingDetails = document.querySelector('#deepseek-section details');
+                        const wasOpen = existingDetails ? existingDetails.hasAttribute('open') : true; // Default to open while streaming
+                        
+                        const answerHtml = classFormatMarkdown(content);
+                        let finalHtml = answerHtml;
+                        
+                        if (reasoning) {
+                            const reasoningHtml = `
+                                <div class="reasoning-container">
+                                    <details ${wasOpen ? 'open' : ''}>
+                                        <summary>🦈 DeepSeek Thought Process</summary>
+                                        <div class="reasoning-content">${reasoning.replace(/\n/g, '<br>')}</div>
+                                    </details>
+                                </div>
+                            `;
+                            finalHtml = reasoningHtml + answerHtml;
+                        }
+                        
+                        updateSection('deepseek-section', finalHtml);
+                    })
+                    .then(finalResult => {
+                         // Final render to ensure everything is clean (callback covers it, but good for safety)
+                         // We don't strictly need to do anything here if the callback was exhaustive,
+                         // but we might want to ensure 'Loading...' is cleared if empty.
+                         if (!finalResult.content && !finalResult.reasoning) {
+                             updateSection('deepseek-section', 'No content returned.');
+                         }
+                    })
+                    .catch(err => updateSection('deepseek-section', 'Error: ' + err.message));
                 } else {
                     updateSection('deepseek-section', 'API Key not configured.');
                 }
@@ -371,13 +428,19 @@ document.addEventListener('DOMContentLoaded', () => {
             let msg = err.message;
             if (msg.includes("Cannot capture")) msg = "Could not capture page. Try reloading.";
             
-            // Show error in all active targets
-             if (!targetServices || targetServices.includes('gemini')) updateSection('gemini-section', 'Error: ' + msg);
-             // Others might fail too, but usually this capture error affects all
-             if (!targetServices || targetServices.includes('deepseek')) updateSection('deepseek-section', 'Error: ' + msg);
+            // Show error in all active targets if they are still "Loading..."
+             if (!targetServices || targetServices.includes('gemini')) {
+                 const el = document.querySelector('#gemini-section .content');
+                 if(el && el.textContent === 'Loading...') updateSection('gemini-section', 'Error: ' + msg);
+             }
+             if (!targetServices || targetServices.includes('deepseek')) {
+                 const el = document.querySelector('#deepseek-section .content');
+                 // For deepseek, if we already streamed something, maybe don't overwrite with error? 
+                 // But if error is fatal, we should.
+                 updateSection('deepseek-section', 'Error: ' + msg);
+             }
         } finally {
             // Auto-cleanup memory
-            // Immediate cleanup is safe now because we awaited storage and initiated calls
             screenshotUrl = null;
             pageText = null;
         }

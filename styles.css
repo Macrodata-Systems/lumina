@@ -505,3 +505,42 @@ h1 {
   color: white;
   border-color: var(--primary-color);
 }
+
+/* DeepSeek Chain of Thought Styles */
+.reasoning-container {
+  background-color: var(--bg-color);
+  border-left: 3px solid var(--primary-color);
+  margin-bottom: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+details {
+  width: 100%;
+}
+
+summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--primary-text);
+  background-color: rgba(0, 0, 0, 0.03);
+  user-select: none;
+  outline: none;
+}
+
+summary:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.reasoning-content {
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  color: var(--secondary-text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  font-family: monospace;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-top: 1px solid var(--border-color);
+}

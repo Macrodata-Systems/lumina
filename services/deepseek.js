@@ -1,12 +1,8 @@
-export async function callDeepSeek(apiKey, screenshotUrl, promptText) {
+export async function callDeepSeek(apiKey, screenshotUrl, promptText, onUpdate) {
   const deepseekEndpoint = 'https://api.deepseek.com/chat/completions';
 
-  // DeepSeek V3 is primarily text-based. Ignoring screenshotUrl for now to avoid errors.
-  // Appending a note if a screenshot was essentially ignored?
-  // Actually, we'll just send the text prompt which already includes page text.
-
   const payload = {
-    model: "deepseek-chat",
+    model: "deepseek-reasoner",
     messages: [
       {
         role: "system",
@@ -17,26 +13,80 @@ export async function callDeepSeek(apiKey, screenshotUrl, promptText) {
         content: promptText
       }
     ],
-    temperature: 0.7
+    temperature: 0.7,
+    stream: true
   };
 
   try {
     const response = await fetch(deepseekEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(payload)
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error?.message || `API Error: ${response.status}`);
+        let errorMsg = `API Error: ${response.status}`;
+        try {
+            const errData = await response.json();
+            errorMsg = errData.error?.message || errorMsg;
+        } catch(e) {}
+        throw new Error(errorMsg);
     }
 
-    const data = await response.json();
-    return data.choices[0].message.content;
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let accumulatedReasoning = "";
+    let accumulatedContent = "";
+    
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        // Process SSE lines
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed === 'data: [DONE]') continue;
+            
+            if (trimmed.startsWith('data: ')) {
+                try {
+                    const jsonStr = trimmed.substring(6);
+                    const data = JSON.parse(jsonStr);
+                    const delta = data.choices[0]?.delta;
+                    
+                    if (delta) {
+                        if (delta.reasoning_content) {
+                            accumulatedReasoning += delta.reasoning_content;
+                        }
+                        if (delta.content) {
+                            accumulatedContent += delta.content;
+                        }
+                        
+                        // Fire callback with current state
+                        if (onUpdate) {
+                            onUpdate({
+                                reasoning: accumulatedReasoning,
+                                content: accumulatedContent
+                            });
+                        }
+                    }
+                } catch (e) {
+                    // console.warn('Error parsing SSE chunk', e);
+                }
+            }
+        }
+    }
+
+    // Final return (though callback handles most of it)
+    return {
+        reasoning: accumulatedReasoning,
+        content: accumulatedContent
+    };
 
   } catch (error) {
     console.error("DeepSeek API Error:", error);

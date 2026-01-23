@@ -2,6 +2,7 @@
     "manifest_version": 3,
     "name": "Lumina",
     "version": "1.1",
+    "author": "Harsh Raj Singh",
     "description": "Explain anything on your screen - Slides, Papers, News, Articles - using Gemini, OpenAI, and Claude.",
     "permissions": [
         "activeTab",
