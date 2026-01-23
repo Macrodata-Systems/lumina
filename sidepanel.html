@@ -13,13 +13,7 @@
 
 <body>
     <div class="container">
-        <header>
-            <h1>Lumina</h1>
-            <div class="header-actions">
-                <button id="theme-toggle" class="icon-btn">🌙</button>
-                <button id="settings-btn" class="icon-btn">⚙️</button>
-            </div>
-        </header>
+
 
         <div id="main-view">
             <div class="controls-wrapper">
@@ -37,6 +31,7 @@
 
                     <!-- Right: Actions -->
                     <div class="action-buttons">
+                        <div style="width: 1px; height: 16px; background: var(--border-color); margin: 0 4px;"></div>
                         <button id="mic-btn" class="icon-action-btn" title="Voice Input">🎤</button>
                         <button id="load-text-btn" class="icon-action-btn" title="Paste Page Text">📥</button>
                         <button id="send-btn" class="icon-action-btn primary" title="Send">➤</button>
@@ -47,6 +42,11 @@
                     <button class="chip" data-prompt="Summarize this">Summary</button>
                     <button class="chip" data-prompt="Give commentary on this">Commentary</button>
                     <button class="chip" data-prompt="Track my work based on this">Track Work</button>
+
+                    <div class="header-actions">
+                        <button id="theme-toggle" class="icon-action-btn" title="Toggle Theme">🌙</button>
+                        <button id="settings-btn" class="icon-action-btn" title="Settings">⚙️</button>
+                    </div>
                 </div>
 
                 <button id="explain-btn" class="hidden">Explain Page</button>
@@ -63,6 +63,8 @@
                     <summary>View Constructed Query</summary>
                     <div id="query-content">Waiting for request...</div>
                 </details>
+
+
             </div>
 
             <div id="results-container" class="hidden">
@@ -137,7 +139,7 @@
             <div class="input-group">
                 <div class="label-row">
                     <label for="gemini-key">Gemini API Key (Free)</label>
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="help-link">Get Key</a>
+                    <button class="paste-btn" data-target="gemini-key">Paste Key</button>
                 </div>
                 <input type="password" id="gemini-key" placeholder="Enter Gemini API Key">
             </div>
@@ -158,22 +160,21 @@
                 <div class="input-group">
                     <div class="label-row">
                         <label for="openai-key">OpenAI API Key</label>
-                        <a href="https://platform.openai.com/api-keys" target="_blank" class="help-link">Get Key</a>
+                        <button class="paste-btn" data-target="openai-key">Paste Key</button>
                     </div>
                     <input type="password" id="openai-key" placeholder="Enter OpenAI API Key">
                 </div>
                 <div class="input-group">
                     <div class="label-row">
                         <label for="anthropic-key">Anthropic API Key</label>
-                        <a href="https://console.anthropic.com/settings/keys" target="_blank" class="help-link">Get
-                            Key</a>
+                        <button class="paste-btn" data-target="anthropic-key">Paste Key</button>
                     </div>
                     <input type="password" id="anthropic-key" placeholder="Enter Anthropic API Key">
                 </div>
                 <div class="input-group">
                     <div class="label-row">
                         <label for="deepseek-key">DeepSeek API Key</label>
-                        <a href="https://platform.deepseek.com/api_keys" target="_blank" class="help-link">Get Key</a>
+                        <button class="paste-btn" data-target="deepseek-key">Paste Key</button>
                     </div>
                     <input type="password" id="deepseek-key" placeholder="Enter DeepSeek API Key">
                 </div>

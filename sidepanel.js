@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if((!targetServices || targetServices.includes('openai'))) {
                 if (!isPro()) {
-                     updateSection('openai-section', '🔒 <strong>Pro Feature</strong><br>Upgrade to use ChatGPT 4o.');
+                     updateSection('openai-section', getLockOverlayHTML('ChatGPT 4o'));
                 } else if(keys.openaiKey) {
                     callOpenAI(keys.openaiKey, screenshotUrl, finalPrompt)
                             .then(text => {
@@ -406,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if((!targetServices || targetServices.includes('anthropic'))) {
                 if (!isPro()) {
-                     updateSection('anthropic-section', '🔒 <strong>Pro Feature</strong><br>Upgrade to use Claude 3.5 Sonnet.');
+                     updateSection('anthropic-section', getLockOverlayHTML('Claude 3.5 Sonnet'));
                 } else if(keys.anthropicKey) {
                     callAnthropic(keys.anthropicKey, screenshotUrl, finalPrompt)
                         .then(text => {
@@ -421,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if((!targetServices || targetServices.includes('deepseek'))) {
                 if (!isPro()) {
-                     updateSection('deepseek-section', '🔒 <strong>Pro Feature</strong><br>Upgrade to use DeepSeek R1.');
+                     updateSection('deepseek-section', getLockOverlayHTML('DeepSeek R1'));
                 } else if(keys.deepseekKey) {
                      // Streaming implementation for DeepSeek
                     callDeepSeek(keys.deepseekKey, screenshotUrl, finalPrompt, (partial) => {
@@ -607,16 +607,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderHistory() {
         const container = document.querySelector('.history-list-container');
-        const overlay = document.getElementById('pro-overlay');
+        const historySection = document.getElementById('history-section');
+        
+        // Remove existing overlay if any
+        const existingOverlay = historySection.querySelector('.pro-overlay');
+        if(existingOverlay) existingOverlay.remove();
         
         if (!isPro()) {
-             overlay.classList.remove('hidden');
-             // Show empty or blurred items?
-             // Render a fake background of items to look cool behind the blur
+             // Append new overlay
+             historySection.insertAdjacentHTML('beforeend', getLockOverlayHTML('Unlimited History'));
+             // Render blurred items
              renderHistoryItems(container, window.historyData || [], true);
              return;
-        } else {
-             overlay.classList.add('hidden');
         }
 
         renderHistoryItems(container, window.historyData || []);
@@ -663,8 +665,11 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.tabs.create({ url: 'https://gumroad.com/l/lumina-pro-demo' }); 
     });
     
-    document.getElementById('unlock-pro-btn').addEventListener('click', () => {
-        openSettings('license-key');
+    // Delegation for dynamic unlock buttons
+    document.addEventListener('click', (e) => {
+        if(e.target && e.target.classList.contains('unlock-btn')) {
+             openSettings('license-key');
+        }
     });
 
     document.getElementById('clear-history-btn').addEventListener('click', () => {
@@ -675,4 +680,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Delegated click for paste buttons
+    document.addEventListener('click', async (e) => {
+        if(e.target && e.target.classList.contains('paste-btn')) {
+             try {
+                 const text = await navigator.clipboard.readText();
+                 if(text) {
+                     const targetId = e.target.getAttribute('data-target');
+                     const input = document.getElementById(targetId);
+                     if(input) {
+                         input.value = text;
+                         // Visual feedback
+                         const originalText = e.target.textContent;
+                         e.target.textContent = 'Pasted!';
+                         setTimeout(() => e.target.textContent = originalText, 1000);
+                     }
+                 }
+             } catch(err) {
+                 console.error('Failed to read clipboard', err);
+                 alert('Could not paste. Please paste manually.');
+             }
+        }
+    });
 });
+
+function getLockOverlayHTML(featureName) {
+    return `
+    <div class="pro-overlay">
+        <div class="pro-lock-content">
+            <span class="lock-icon">🔒</span>
+            <h3>Lumina Pro</h3>
+            <p>Upgrade to unlock ${featureName} and more.</p>
+            <button class="primary-btn unlock-btn">Unlock Now</button>
+        </div>
+    </div>
+    `;
+}
