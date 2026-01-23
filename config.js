@@ -12,8 +12,9 @@
 
 export const API_CONFIG = {
     // Paste your keys inside the quotes below
-    geminiKey: "",      
-    openaiKey: "",      
-    anthropicKey: "",   
-    deepseekKey: ""     
+    geminiKey: "",
+    openaiKey: "",
+    anthropicKey: "",
+    grokKey: "",
+    deepseekKey: ""
 };

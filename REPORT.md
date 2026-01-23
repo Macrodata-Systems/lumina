@@ -22,8 +22,10 @@ We minimized permissions to only what is strictly necessary:
 
 ### 2.3 API Integration Strategy
 The extension calls AI provider APIs directly from the client side services.
--   **Supported Models**: Gemini 1.5 Flash, GPT-4o, Claude 3.5 Sonnet, and **DeepSeek R1 (Reasoner)**.
--   **DeepSeek Integration**: Added a dedicated service for DeepSeek, utilizing the `deepseek-reasoner` model to provide "Chain of Thought" reasoning alongside the final answer.
+-   **Supported Models**: Gemini 1.5 Flash, GPT-4o, Claude 3.5 Sonnet, **xAI Grok**, and DeepSeek R1.
+-   **DeepSeek & Grok Integration**: Added dedicated services for these newer models.
+    -   *DeepSeek*: Utilizes `deepseek-reasoner` for "Chain of Thought".
+    -   *Grok*: Architected for future API integration (currently in preview).
 
 ## 3. Design Decisions
 
@@ -31,21 +33,25 @@ The extension calls AI provider APIs directly from the client side services.
 We redesigned the input interface into a unified "Super Prompt Bar".
 -   **Unified Input**: Combines text input, voice input, and context toggles in a single pill-shaped component.
 -   **Voice Input**: Integrated the **Web Speech API** to allow users to dictate prompts directly.
--   **Context Control**: Toggles for "Screenshot" (📸) and "Page Text" (📄) allow users to granularly control what context is sent to the AI, saving tokens and improving relevant accuracy.
 
-### 3.2 DeepSeek Chain of Thought
+### 3.2 Adaptive UI Navigation (New)
+To accommodate a growing list of features without cluttering the side panel, we implemented "Marquee-style" navigation.
+-   **Horizontal Scrolling**: Both the **Quick Prompt Chips** and **Model Tabs** (now 6 items) utilize a horizontal scrolling container with custom, unobtrusive scrollbars (`4px` thin).
+-   **Space Efficiency**: This allows infinite scalability for future models or actions without breaking the layout width.
+-   **Fixed Controls**: Critical actions (Theme Toggle, Settings) were moved outside the scrollable areas to ensure they remain permanently accessible.
+
+### 3.3 DeepSeek Chain of Thought
 We integrated DeepSeek specifically to leverage its reasoning capabilities.
 -   **Decision**: Instead of just showing the answer, we parse the `reasoning_content` from the API response.
--   **UI Implementation**: This is displayed in a collapsible `<details>` section ("🦈 DeepSeek Thought Process") above the answer, giving users insight into the model's logic without cluttering the view.
+-   **UI Implementation**: This is displayed in a collapsible `<details>` section ("🦈 DeepSeek Thought Process").
 
-### 3.3 Robust Flexbox Layout
+### 3.4 Robust Flexbox Layout
 We moved away from sticky positioning to a **Flexbox Application Layout**.
--   **Stability**: The header (Prompt Bar) is fixed, while the results area scrolls independently. This prevents UI elements from being cut off or overlapping on smaller screens.
+-   **Stability**: The header (Prompt Bar) is fixed, while the results area scrolls independently.
 -   **Responsiveness**: The layout adapts fluidly to the side panel's width.
 
-### 3.4 Zero-Click Experience (Refined)
-While we support auto-explanation, the new UI empowers the user to drive the interaction.
--   **Manual Control**: Users can now choose to "Load Page Text" or toggle screenshots before sending a query, preventing accidental/unwanted API usage.
+### 3.5 Zero-Click Experience (Refined)
+-   **Manual Control**: Users can now choose to "Load Page Text" or toggle screenshots before sending a query.
 
 ## 4. Challenges & Solutions
 

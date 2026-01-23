@@ -12,11 +12,15 @@
     -   **Google Gemini 1.5 Flash**
     -   **OpenAI GPT-4o**
     -   **Anthropic Claude 3.5 Sonnet**
+    -   **xAI Grok** 🤘
     -   **DeepSeek R1 (Reasoner)** 🦈
 -   **Super Prompt Bar**: A unified, pill-shaped input bar for all your interactions.
     -   **Voice Input (🎤)**: Speak your query directly using the Web Speech API.
     -   **Page Text Loading (📥)**: Instantly grab text from the page to use in your prompt.
     -   **Smart Toggles**: Easily toggle Screenshot (📸) and Page Text (📄) context on/off.
+-   **Enhanced UI**:
+    -   **Marquee Chips**: Horizontal scrolling for quick prompts to save space.
+    -   **Scrollable Tabs**: Navigate easily between all 6 models on any screen size.
 -   **Chain of Thought Display**: See the reasoning process behind DeepSeek's answers in a dedicated collapsible section.
 -   **Focused Configuration**: Click the ⚙️ icon next to any model to quickly configure just that specific provider.
 -   **Side-by-Side Comparison**: Compare how different AIs interpret the same content in a single view.
