@@ -42,9 +42,17 @@ We chose a **vertical stack** layout for results rather than tabs.
 ## 4. Challenges & Solutions
 
 -   **API Key Management**: Asking users for 3 keys is high friction.
-    -   *Solution*: The UI gracefully handles missing keys. If only Gemini is configured, only the Gemini section works, and others show a helpful "Not configured" message rather than breaking the app.
--   **Screenshot Quality**:
-    -   *Solution*: Used `jpeg` with `80` quality. This is a good balance between visual fidelity for OCR/Analysis and payload size for API limits.
+    -   *Solution*: The UI gracefully handles missing keys. We added **focused settings** views that guide the user to specific keys, and direct "Get Key" links to lower the barrier to entry.
+-   **Screenshot Reliability & Permissions**:
+    -   *Challenge*: `activeTab` permission proved unreliable for Side Panels on complex sites or when switching contexts.
+    -   *Solution*: Upgraded to `host_permissions: ["<all_urls>"]`. While broader, this ensures the extension can reliably capture the visible tab without user friction.
+    -   *Refinement*: Added robust error handling to gracefully warn (instead of crash) when users try to capture restricted system pages (`chrome://`).
+-   **Assets & CSP**:
+    -   *Challenge*: External font libraries (FontAwesome) were blocked by Chrome's strict Content Security Policy (CSP), causing invisible icons.
+    -   *Solution*: Switched to standard **Emojis** (⚙️, ✨, 🤖). This removed the external dependency entirely, reducing load time and guaranteeing visibility.
+-   **Responsive Layout**:
+    -   *Challenge*: Hardcoded width caused the layout to break or hide buttons when the Side Panel was resized.
+    -   *Solution*: Switched to a fluid `100%` width with `min-width` constraints, ensuring the UI adapts perfectly to user preference.
 
 ## 5. Future Improvements
 

@@ -6,11 +6,13 @@
 
 ## Features
 
--   **Universal Capture**: Instantly captures a screenshot of your active tab.
+-   **Universal Capture**: Works on potentially any website (including restricted ones like LinkedIn) thanks to enhanced permissions.
+-   **Always-On Intelligence**: Automatically re-analyzes the page when you **switch tabs** or **navigate** to a new URL.
 -   **Multi-Model Intelligence**: Get explanations from three leading AI models simultaneously:
     -   **Google Gemini 1.5 Flash**
     -   **OpenAI GPT-4o**
     -   **Anthropic Claude 3.5 Sonnet**
+-   **Focused Configuration**: Click the ⚙️ icon next to any model to quickly configure just that specific provider.
 -   **Side-by-Side Comparison**: Compare how different AIs interpret the same content in a single view.
 -   **Secure**: Your API keys are stored locally in your browser (`chrome.storage.local`) and never sent to our servers.
 
@@ -26,13 +28,16 @@ Since this is a developer preview (unpacked extension):
 
 ## Configuration
 
-1.  Click the **Lumina** extension icon in your toolbar.
-2.  Click the **Settings (Gear)** icon in the top-right corner of the popup.
-3.  Enter your API Keys for the services you wish to use:
-    -   [Get Gemini Key](https://aistudio.google.com/app/apikey)
-    -   [Get OpenAI Key](https://platform.openai.com/api-keys)
-    -   [Get Anthropic Key](https://console.anthropic.com/settings/keys)
-4.  Click **Save**.
+Lumina makes setup easy with direct links to get your keys:
+
+1.  Click the **Lumina** extension icon (ensure it's pinned for easy access).
+2.  Open the Side Panel.
+3.  Click the **Gear Icon (⚙️)** next to any model (e.g., Gemini).
+4.  Click the **"Get Key"** link to open the provider's API page:
+    -   [Google AI Studio](https://aistudio.google.com/app/apikey)
+    -   [OpenAI Platform](https://platform.openai.com/api-keys)
+    -   [Anthropic Console](https://console.anthropic.com/settings/keys)
+5.  Paste your key and click **Save**.
 
 ## Usage
 

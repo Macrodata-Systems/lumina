@@ -5,16 +5,31 @@
     "description": "Explain anything on your screen - Slides, Papers, News, Articles - using Gemini, OpenAI, and Claude.",
     "permissions": [
         "activeTab",
-        "storage"
+        "storage",
+        "sidePanel"
+    ],
+    "host_permissions": [
+        "<all_urls>"
     ],
     "action": {
-        "default_popup": "popup.html",
-        "default_title": "Explain This"
+        "default_title": "Lumina",
+        "default_icon": {
+            "16": "icon16.png",
+            "32": "icon32.png",
+            "48": "icon.png",
+            "128": "icon128.png"
+        }
+    },
+    "side_panel": {
+        "default_path": "sidepanel.html"
     },
     "background": {
         "service_worker": "background.js"
     },
     "icons": {
-        "48": "icon.png"
+        "16": "icon16.png",
+        "32": "icon32.png",
+        "48": "icon.png",
+        "128": "icon128.png"
     }
 }

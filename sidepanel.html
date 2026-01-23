@@ -15,7 +15,10 @@
     <div class="container">
         <header>
             <h1>Lumina</h1>
-            <button id="settings-btn" class="icon-btn"><i class="fas fa-cog"></i></button>
+            <div class="header-actions">
+                <button id="theme-toggle" class="icon-btn">🌙</button>
+                <button id="settings-btn" class="icon-btn">⚙️</button>
+            </div>
         </header>
 
         <div id="main-view">
@@ -23,15 +26,24 @@
 
             <div id="results-container" class="hidden">
                 <div class="result-section" id="gemini-section">
-                    <h3><i class="fas fa-sparkles"></i> Gemini</h3>
+                    <div class="section-header">
+                        <h3>✨ Gemini</h3>
+                        <button class="config-btn" data-target="gemini-key">⚙️</button>
+                    </div>
                     <div class="content"></div>
                 </div>
                 <div class="result-section" id="openai-section">
-                    <h3><i class="fas fa-robot"></i> ChatGPT</h3>
+                    <div class="section-header">
+                        <h3>🤖 ChatGPT</h3>
+                        <button class="config-btn" data-target="openai-key">⚙️</button>
+                    </div>
                     <div class="content"></div>
                 </div>
                 <div class="result-section" id="anthropic-section">
-                    <h3><i class="fas fa-brain"></i> Claude</h3>
+                    <div class="section-header">
+                        <h3>🧠 Claude</h3>
+                        <button class="config-btn" data-target="anthropic-key">⚙️</button>
+                    </div>
                     <div class="content"></div>
                 </div>
             </div>
@@ -40,22 +52,31 @@
         <div id="settings-view" class="hidden">
             <h2>Settings</h2>
             <div class="input-group">
-                <label for="gemini-key">Gemini API Key</label>
+                <div class="label-row">
+                    <label for="gemini-key">Gemini API Key</label>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="help-link">Get Key</a>
+                </div>
                 <input type="password" id="gemini-key" placeholder="Enter Gemini API Key">
             </div>
             <div class="input-group">
-                <label for="openai-key">OpenAI API Key</label>
+                <div class="label-row">
+                    <label for="openai-key">OpenAI API Key</label>
+                    <a href="https://platform.openai.com/api-keys" target="_blank" class="help-link">Get Key</a>
+                </div>
                 <input type="password" id="openai-key" placeholder="Enter OpenAI API Key">
             </div>
             <div class="input-group">
-                <label for="anthropic-key">Anthropic API Key</label>
+                <div class="label-row">
+                    <label for="anthropic-key">Anthropic API Key</label>
+                    <a href="https://console.anthropic.com/settings/keys" target="_blank" class="help-link">Get Key</a>
+                </div>
                 <input type="password" id="anthropic-key" placeholder="Enter Anthropic API Key">
             </div>
             <button id="save-settings-btn" class="secondary-btn">Save</button>
             <button id="back-btn" class="text-btn">Back</button>
         </div>
     </div>
-    <script type="module" src="popup.js"></script>
+    <script type="module" src="sidepanel.js"></script>
 </body>
 
 </html>

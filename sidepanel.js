@@ -10,30 +10,90 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveSettingsBtn = document.getElementById('save-settings-btn');
     const explainBtn = document.getElementById('explain-btn');
     
+    const themeToggleBtn = document.getElementById('theme-toggle');
+
     // Inputs
     const geminiKeyInput = document.getElementById('gemini-key');
     const openaiKeyInput = document.getElementById('openai-key');
     const anthropicKeyInput = document.getElementById('anthropic-key');
 
-    // Load Settings
-    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey'], (result) => {
+    // Load Settings & Theme
+    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'theme'], (result) => {
         if (result.geminiKey) geminiKeyInput.value = result.geminiKey;
         if (result.openaiKey) openaiKeyInput.value = result.openaiKey;
         if (result.anthropicKey) anthropicKeyInput.value = result.anthropicKey;
+        
+        // Apply saved theme or default to light
+        const currentTheme = result.theme || 'dark';
+        applyTheme(currentTheme);
     });
+
+    // Theme Toggle Logic
+    themeToggleBtn.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        applyTheme(newTheme);
+    });
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        chrome.storage.local.set({ theme });
+        
+        // Update Icon: Sun for Dark Mode (to switch to light), Moon for Light Mode
+        if (theme === 'dark') {
+            themeToggleBtn.innerHTML = '☀️';
+        } else {
+            themeToggleBtn.innerHTML = '🌙';
+        }
+    }
 
     // Navigation
     settingsBtn.addEventListener('click', () => {
-        mainView.classList.add('hidden');
-        settingsView.classList.remove('hidden');
-        settingsBtn.classList.add('hidden');
+        openSettings(); // No arg = show all
     });
 
     backBtn.addEventListener('click', () => {
         settingsView.classList.add('hidden');
         mainView.classList.remove('hidden');
         settingsBtn.classList.remove('hidden');
+        document.querySelector('.header-actions').classList.remove('hidden'); 
     });
+
+    // Config Buttons Logic
+    document.querySelectorAll('.config-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+             const targetId = btn.getAttribute('data-target');
+             openSettings(targetId);
+        });
+    });
+
+    function openSettings(focusId = null) {
+        mainView.classList.add('hidden');
+        settingsView.classList.remove('hidden');
+        settingsBtn.classList.add('hidden');
+
+        // Filter input groups based on focusId
+        const groups = settingsView.querySelectorAll('.input-group');
+        groups.forEach(group => {
+            if (!focusId) {
+                // Show all
+                group.classList.remove('hidden');
+            } else {
+                // Show only if group contains the target input
+                if (group.querySelector(`#${focusId}`)) {
+                    group.classList.remove('hidden');
+                } else {
+                    group.classList.add('hidden');
+                }
+            }
+        });
+
+        // Focus the input if specific one requested
+        if (focusId) {
+             const input = document.getElementById(focusId);
+             if (input) setTimeout(() => input.focus(), 100);
+        }
+    }
 
     // Save Settings
     saveSettingsBtn.addEventListener('click', () => {
@@ -91,14 +151,34 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         } catch (err) {
-            console.error(err);
+            if (err.message.includes("Cannot capture")) {
+                console.warn("Known limitation:", err.message);
+            } else {
+                console.error(err);
+            }
             updateSection('gemini-section', 'Error capturing tab: ' + err.message);
         }
     };
 
-    // Trigger on load if we are in main view (settings hidden)
+    // Auto-Refresh Logic
+    let debounceTimer;
+    const triggerRefresh = () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            startExplanation(); 
+        }, 800); 
+    };
+
+    // Listeners for Tab Switching and Navigation
+    chrome.tabs.onActivated.addListener(triggerRefresh);
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+        if (changeInfo.status === 'complete' && tab.active) {
+            triggerRefresh();
+        }
+    });
+
+    // Ensure we run on initial load
     if (settingsView.classList.contains('hidden')) {
-        // slight delay to ensure render
         setTimeout(startExplanation, 100);
     }
 
@@ -127,12 +207,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function captureTab() {
         return new Promise((resolve, reject) => {
-            chrome.tabs.captureVisibleTab(null, {format: 'jpeg', quality: 80}, (dataUrl) => {
-                if (chrome.runtime.lastError) {
-                    reject(chrome.runtime.lastError);
-                } else {
-                    resolve(dataUrl);
+            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                if (!tabs || tabs.length === 0) {
+                    reject(new Error("No active tab found."));
+                    return;
                 }
+                const activeTab = tabs[0];
+                const windowId = activeTab.windowId;
+
+                chrome.tabs.captureVisibleTab(windowId, {format: 'jpeg', quality: 80}, (dataUrl) => {
+                    if (chrome.runtime.lastError) {
+                        const errorMsg = chrome.runtime.lastError.message;
+                        if (errorMsg.includes("permission") || errorMsg.includes("activeTab")) {
+                            // Still showing the friendly message, but appending the real one for clarity
+                            reject(new Error(`Cannot capture page. Extension might need 'activeTab' permissions or a reload. (Details: ${errorMsg})`));
+                        } else {
+                            reject(chrome.runtime.lastError);
+                        }
+                    } else {
+                        resolve(dataUrl);
+                    }
+                });
             });
         });
     }
