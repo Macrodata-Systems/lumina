@@ -134,6 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateProSettingsVisibility() {
         const proSettings = document.getElementById('pro-model-settings');
         const licenseGroup = document.getElementById('license-input-group');
+        const allConfigBtns = document.querySelectorAll('.config-btn');
+        const mainSettingsBtn = document.getElementById('settings-btn');
 
         // 1. Pro Model Settings visibility (Enabled in Beta)
         if (isPro()) {
@@ -142,13 +144,15 @@ document.addEventListener('DOMContentLoaded', () => {
             proSettings.classList.add('hidden');
         }
 
-        // 2. License Input visibility (Strictly developerMode only)
-        if (licenseGroup) {
-            if (API_CONFIG.developerMode) {
-                licenseGroup.classList.remove('hidden');
-            } else {
-                licenseGroup.classList.add('hidden');
-            }
+        // 2. Technical UI Controls (Strictly developerMode only)
+        if (API_CONFIG.developerMode) {
+            if (licenseGroup) licenseGroup.classList.remove('hidden');
+            if (mainSettingsBtn) mainSettingsBtn.classList.remove('hidden');
+            allConfigBtns.forEach(btn => btn.classList.remove('hidden'));
+        } else {
+            if (licenseGroup) licenseGroup.classList.add('hidden');
+            if (mainSettingsBtn) mainSettingsBtn.classList.add('hidden');
+            allConfigBtns.forEach(btn => btn.classList.add('hidden'));
         }
     }
 
@@ -435,30 +439,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Trigger explanations (Fire and forget, don't await completion to keep UI parallel)
             if ((!targetServices || targetServices.includes('gemini'))) {
-                if (keys.geminiKey) {
-                    callGemini(keys.geminiKey, screenshotUrl, finalPrompt)
-                        .then(text => {
-                            updateSection('gemini-section', classFormatMarkdown(text));
-                            saveToHistory(finalPrompt, text, 'Gemini');
-                        })
-                        .catch(err => updateSection('gemini-section', 'Error: ' + err.message));
-                } else {
-                    updateSection('gemini-section', 'API Key not configured.');
-                }
+                const geminiCall = keys.geminiKey
+                    ? callGemini(keys.geminiKey, screenshotUrl, finalPrompt)
+                    : callAIProxy('gemini', finalPrompt, screenshotUrl);
+
+                geminiCall
+                    .then(text => {
+                        updateSection('gemini-section', classFormatMarkdown(text));
+                        saveToHistory(finalPrompt, text, 'Gemini');
+                    })
+                    .catch(err => updateSection('gemini-section', 'Error: ' + err.message));
             }
 
             if ((!targetServices || targetServices.includes('openai'))) {
                 if (!isPro()) {
                     updateSection('openai-section', getLockOverlayHTML('ChatGPT 4o'));
-                } else if (keys.openaiKey) {
-                    callOpenAI(keys.openaiKey, screenshotUrl, finalPrompt)
+                } else {
+                    const openaiCall = keys.openaiKey
+                        ? callOpenAI(keys.openaiKey, screenshotUrl, finalPrompt)
+                        : callAIProxy('openai', finalPrompt, screenshotUrl);
+
+                    openaiCall
                         .then(text => {
                             updateSection('openai-section', classFormatMarkdown(text));
                             saveToHistory(finalPrompt, text, 'ChatGPT');
                         })
                         .catch(err => updateSection('openai-section', 'Error: ' + err.message));
-                } else {
-                    updateSection('openai-section', 'API Key not configured.');
                 }
             }
 
@@ -780,11 +786,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Could not paste. Please paste manually.');
             }
         }
+        // Hidden Developer Toggle (Click copyright 7 times)
+        let clickCount = 0;
+        const footerCopyright = document.querySelector('.footer-info p');
+        if (footerCopyright) {
+            footerCopyright.style.cursor = 'help';
+            footerCopyright.addEventListener('click', () => {
+                clickCount++;
+                if (clickCount >= 7) {
+                    API_CONFIG.developerMode = !API_CONFIG.developerMode;
+                    updateProSettingsVisibility();
+                    alert(`Developer Mode: ${API_CONFIG.developerMode ? 'ON (Tech UI Visible)' : 'OFF (User UI Clean)'}`);
+                    clickCount = 0;
+                }
+            });
+        }
     });
-});
 
-function getLockOverlayHTML(featureName) {
-    return `
+    function getLockOverlayHTML(featureName) {
+        return `
     <div class="pro-overlay">
         <button class="pro-close-btn" title="Go Back">✕</button>
         <div class="pro-lock-content">
@@ -795,4 +815,36 @@ function getLockOverlayHTML(featureName) {
         </div>
     </div>
     `;
-}
+    }
+
+    /**
+     * Call AI via Secure Backend Proxy (To hide developer keys)
+     */
+    async function callAIProxy(service, prompt, imageUrl) {
+        if (!API_CONFIG.licenseServerUrl || API_CONFIG.licenseServerUrl === "REPLACE_WITH_YOUR_DEPLOYED_WEB_APP_URL") {
+            throw new Error('Backend Proxy not configured. Help the developer by setting LicenseServerUrl.');
+        }
+
+        try {
+            const resp = await fetch(API_CONFIG.licenseServerUrl, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: "proxy_ai",
+                    service: service,
+                    prompt: prompt,
+                    imageUrl: imageUrl
+                })
+            });
+
+            const data = await resp.json();
+            if (!data.success) {
+                throw new Error(data.error || "Proxy failed.");
+            }
+            return data.text;
+        } catch (e) {
+            console.error(`Proxy error (${service}):`, e);
+            throw new Error(`Proxy error: ${e.message}`);
+        }
+    }
+});

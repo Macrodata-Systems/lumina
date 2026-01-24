@@ -18,14 +18,14 @@ export const API_CONFIG = {
     grokKey: "",
     deepseekKey: "",
 
-    // Set to true to unlock all features for development
-    developerMode: true,
+    // Set to true to unlock all features and show technical settings (Gear icons, API tags)
+    developerMode: false,
 
     // GLOBAL BETA: Set to true to give everyone PRO features for 6 months
     earlyBirdBeta: true,
 
     // Your Google Apps Script Web App URL
-    licenseServerUrl: "",
+    licenseServerUrl: "https://script.google.com/macros/s/AKfycbwkAOdRUy91qJ6eT-Xo9RxkeiURR31uXNwgJxrVEOmneCdoiES5y6PAZ8fHsUcQJYzY/exec",
 
     // Stripe Payment Link (Optional)
     stripePaymentLink: "",

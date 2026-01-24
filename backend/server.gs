@@ -1,7 +1,8 @@
-// Google Apps Script - Lumina Backend v6 (Global Beta Support)
+// Google Apps Script - Lumina Backend v8.5 (VERBOSE DEBUG)
+const SCRIPT_VERSION = "v8.5-DEBUG";
 
 // CONFIGURATION
-const SHEET_ID = "REPLACE_WITH_YOUR_SHEET_ID";
+const SHEET_ID = "15wV71ItpuyYQAhFAxaLMDuH4YZPLZisogvvFh-PIAlg";
 const ADMIN_EMAIL = "singhharsh199@gmail.com";
 const RESEND_API_KEY = "REPLACE_WITH_RESEND_API_KEY"; 
 const FROM_EMAIL = "noreply@lumina-ai.com";
@@ -9,6 +10,13 @@ const FROM_EMAIL = "noreply@lumina-ai.com";
 // --- GLOBAL BETA SETTINGS ---
 const GLOBAL_BETA_ACTIVE = true; // Set to false after 6 months
 const BETA_MESSAGE = "Early Bird Beta Active - Enjoy Pro features for free!";
+
+// --- SECURE PROXY KEYS (DO NOT SHARE THESE) ---
+// Note: Only Gemini is implemented as a free proxy for now.
+const PROXY_KEYS = {
+  gemini: "AIzaSyAcexnrUQNvLfBJi03SH5OJG48Q1IwljII",
+  openai: "REPLACE_WITH_YOUR_OPENAI_KEY" // Optional
+};
 
 /**
  * Handle incoming POST requests from the extension.
@@ -18,9 +26,36 @@ function doPost(e) {
     const data = JSON.parse(e.postData.contents);
     const action = data.action || "verify";
 
+    // --- PRIORITY 1: SECURE AI PROXY (Works without Spreadsheet) ---
+    if (action === "proxy_ai") {
+      const service = data.service || "gemini";
+      const prompt = data.prompt;
+      const imageUrl = data.imageUrl; // Optional base64
+
+      if (service === "gemini") {
+        const response = callGeminiGAS(PROXY_KEYS.gemini, prompt, imageUrl);
+        return createJSON({ success: true, text: response });
+      }
+
+      if (service === "openai") {
+        if (PROXY_KEYS.openai.includes("REPLACE")) {
+          return createJSON({ success: false, error: "OpenAI proxy key not configured." });
+        }
+        const response = callOpenAIGAS(PROXY_KEYS.openai, prompt, imageUrl);
+        return createJSON({ success: true, text: response });
+      }
+
+      return createJSON({ success: false, error: "Service not supported via proxy." });
+    }
+
+    // --- PRIORITY 2: DATABASE ACTIONS (Requires valid Spreadsheet) ---
+    if (SHEET_ID.includes("REPLACE")) {
+      return createJSON({ valid: false, message: "Server initialized for Proxy Only (No Database)." });
+    }
+
     const ss = SpreadsheetApp.openById(SHEET_ID);
     const sheet = ss.getSheetByName("Licenses");
-    if (!sheet) return createJSON({ valid: false, message: "Database Error" });
+    if (!sheet) return createJSON({ valid: false, message: "Database Error: 'Licenses' sheet not found." });
 
     // --- ACTION: VERIFY ---
     if (action === "verify") {
@@ -86,10 +121,35 @@ function doPost(e) {
       }
     }
 
-    return createJSON({ success: false, message: "Unknown action" });
+    // --- ACTION: PROXY_AI (Secure Key Guard) ---
+    if (action === "proxy_ai") {
+      const service = data.service || "gemini";
+      const prompt = data.prompt;
+      const imageUrl = data.imageUrl; // Optional base64
+
+      if (service === "gemini") {
+        if (PROXY_KEYS.gemini === "REPLACE_WITH_YOUR_GEMINI_KEY") {
+          return createJSON({ success: false, error: "Backend proxy key not configured." });
+        }
+        const response = callGeminiGAS(PROXY_KEYS.gemini, prompt, imageUrl);
+        return createJSON({ success: true, text: response });
+      }
+
+      if (service === "openai") {
+        if (PROXY_KEYS.openai === "REPLACE_WITH_YOUR_OPENAI_KEY") {
+          return createJSON({ success: false, error: "Backend proxy key not configured." });
+        }
+        const response = callOpenAIGAS(PROXY_KEYS.openai, prompt, imageUrl);
+        return createJSON({ success: true, text: response });
+      }
+
+      return createJSON({ success: false, error: "Service not supported via proxy." });
+    }
+
+    return createJSON({ success: false, error: "Unknown action: " + action });
 
   } catch (error) {
-    return createJSON({ valid: false, message: "Server Error: " + error.toString() });
+    return createJSON({ success: false, error: "Server Error: " + error.toString() });
   }
 }
 
@@ -161,5 +221,112 @@ function MANUALLY_ISSUE_KEY() {
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName("Licenses");
     sheet.appendRow([email, key, true, now, expiry, "SENT_MANUAL", "YES"]);
   }
+}
+
+/**
+ * Helper: Call Gemini from Google Apps Script
+ */
+function callGeminiGAS(apiKey, prompt, imageUrl) {
+  // Configs to try in order (Based on your successful diagnostic)
+  const configs = [
+    { v: "v1beta", m: "gemini-2.0-flash" },
+    { v: "v1beta", m: "gemini-flash-latest" }, 
+    { v: "v1beta", m: "gemini-2.5-flash" }
+  ];
+
+  let errorLog = [];
+
+  for (const coding of configs) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/${coding.v}/models/${coding.m}:generateContent?key=${apiKey}`;
+      
+      const parts = [{ text: prompt }];
+      if (imageUrl && imageUrl.includes(',')) {
+        parts.push({
+          inline_data: { mime_type: "image/jpeg", data: imageUrl.split(',')[1] }
+        });
+      }
+
+      const payload = { contents: [{ parts: parts }] };
+      const options = {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      };
+
+      const response = UrlFetchApp.fetch(url, options);
+      const resultContent = response.getContentText();
+      let result;
+
+      try { result = JSON.parse(resultContent); } catch (e) { 
+        errorLog.push(`${coding.m}: JSON Parse Failed`);
+        continue; 
+      }
+
+      if (response.getResponseCode() === 200 && result.candidates && result.candidates[0]) {
+        return result.candidates[0].content.parts[0].text;
+      }
+      
+      const msg = result.error ? `${result.error.message} (Code: ${result.error.code})` : "Unknown Error";
+      errorLog.push(`${coding.m} [${coding.v}]: ${msg}`);
+
+    } catch (e) {
+      errorLog.push(`${coding.m}: ${e.message}`);
+    }
+  }
+
+  // --- DIAGNOSTIC: List Available Models ---
+  try {
+    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+    const listResp = UrlFetchApp.fetch(listUrl, { muteHttpExceptions: true });
+    const listData = JSON.parse(listResp.getContentText());
+    
+    if (listData.models) {
+      const availableModels = listData.models.map(m => m.name.replace('models/', ''));
+      errorLog.push(`\n[DIAGNOSTIC] Available Models for your Key: ${availableModels.join(', ')}`);
+    } else {
+      errorLog.push(`\n[DIAGNOSTIC] ListModels Failed: ${JSON.stringify(listData)}`);
+    }
+  } catch (e) {
+    errorLog.push(`\n[DIAGNOSTIC] ListModels Exception: ${e.message}`);
+  }
+
+  // If all failed
+  throw new Error("All AI models failed. " + errorLog.join("\n"));
+}
+
+/**
+ * Helper: Call OpenAI from Google Apps Script
+ */
+function callOpenAIGAS(apiKey, prompt, imageUrl) {
+  const url = "https://api.openai.com/v1/chat/completions";
+  const content = [{ type: "text", text: prompt }];
+  
+  if (imageUrl) {
+    content.push({ type: "image_url", image_url: { url: imageUrl } });
+  }
+
+  const payload = {
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: content }]
+  };
+
+  const options = {
+    method: "post",
+    headers: { "Authorization": "Bearer " + apiKey },
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  const response = UrlFetchApp.fetch(url, options);
+  const result = JSON.parse(response.getContentText());
+  
+  if (response.getResponseCode() !== 200) {
+    throw new Error(result.error?.message || "OpenAI Proxy Error");
+  }
+  
+  return result.choices[0].message.content;
 }
 
