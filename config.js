@@ -19,7 +19,10 @@ export const API_CONFIG = {
     deepseekKey: "",
 
     // Set to true to unlock all features for development
-    developerMode: false,
+    developerMode: true,
+
+    // GLOBAL BETA: Set to true to give everyone PRO features for 6 months
+    earlyBirdBeta: true,
 
     // Your Google Apps Script Web App URL
     licenseServerUrl: "",

@@ -131,7 +131,7 @@
                 <!-- History Section -->
                 <div class="result-section" id="history-section">
                     <div class="section-header">
-                        <h3>History (Pro)</h3>
+                        <h3>History</h3>
                         <div class="header-actions-small">
                             <button id="clear-history-btn" title="Clear History">🗑️</button>
                         </div>
@@ -158,25 +158,25 @@
             <!-- Freemium Settings -->
             <div class="input-group">
                 <div class="label-row">
-                    <label for="gemini-key">Gemini API Key (Free)</label>
+                    <label for="gemini-key">Gemini API Key</label>
                     <button class="paste-btn" data-target="gemini-key" title="Paste from clipboard">Paste Key</button>
                 </div>
                 <input type="password" id="gemini-key" placeholder="Enter Gemini API Key">
             </div>
 
-            <div class="input-group">
-                <div class="label-row">
+            <div class="input-group hidden" id="license-input-group">
+                <div class="label-row hidden">
                     <label for="license-key" style="color: var(--primary-color);">Lumina Pro License</label>
                     <a href="payment.html" target="_blank" class="help-link" id="buy-license-link"
                         title="Purchase Lumina Pro">Get Pro</a>
                 </div>
-                <input type="text" id="license-key" placeholder="Enter Key (e.g. LUMINA-PRO-XXX)">
+                <input class="hidden" type="text" id="license-key" placeholder="Enter Key (e.g. LUMINA-PRO-XXX)">
             </div>
 
             <!-- Pro Settings (Hidden until unlocked) -->
             <div id="pro-model-settings" class="hidden">
                 <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
-                <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 10px;">Pro Model Keys</h3>
+                <!-- <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 10px;">Pro Model Keys</h3> -->
 
                 <div class="input-group">
                     <div class="label-row">

@@ -96,14 +96,24 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsView.classList.remove('hidden');
         settingsBtn.classList.add('hidden');
 
-        // Filter input groups based on focusId
+        // Manage visibility of all input groups
         const groups = settingsView.querySelectorAll('.input-group');
         groups.forEach(group => {
+            // First, determine if this group should ever be visible
+            let isBlacklisted = false;
+            if (group.id === 'license-input-group' && !API_CONFIG.developerMode) {
+                isBlacklisted = true;
+            }
+
+            if (isBlacklisted) {
+                group.classList.add('hidden');
+                return; // Skip further logic for this group
+            }
+
+            // Normal focus logic
             if (!focusId) {
-                // Show all
                 group.classList.remove('hidden');
             } else {
-                // Show only if group contains the target input
                 if (group.querySelector(`#${focusId}`)) {
                     group.classList.remove('hidden');
                 } else {
@@ -123,10 +133,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateProSettingsVisibility() {
         const proSettings = document.getElementById('pro-model-settings');
+        const licenseGroup = document.getElementById('license-input-group');
+
+        // 1. Pro Model Settings visibility (Enabled in Beta)
         if (isPro()) {
             proSettings.classList.remove('hidden');
         } else {
             proSettings.classList.add('hidden');
+        }
+
+        // 2. License Input visibility (Strictly developerMode only)
+        if (licenseGroup) {
+            if (API_CONFIG.developerMode) {
+                licenseGroup.classList.remove('hidden');
+            } else {
+                licenseGroup.classList.add('hidden');
+            }
         }
     }
 
@@ -627,10 +649,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function isPro() {
         if (API_CONFIG.developerMode) return true;
+        if (API_CONFIG.earlyBirdBeta) return true;
         if (window.isLicenseValid) return true;
 
         const key = licenseKeyInput.value.trim();
-        return key.startsWith('TEST'); // Only TEST keys bypass without server verification now
+        return key.startsWith('TEST');
     }
 
     function saveToHistory(prompt, response, service) {

@@ -1,10 +1,14 @@
-// Google Apps Script - Lumina Backend v5 (Expiry Reminders)
+// Google Apps Script - Lumina Backend v6 (Global Beta Support)
 
 // CONFIGURATION
 const SHEET_ID = "REPLACE_WITH_YOUR_SHEET_ID";
 const ADMIN_EMAIL = "singhharsh199@gmail.com";
 const RESEND_API_KEY = "REPLACE_WITH_RESEND_API_KEY"; 
 const FROM_EMAIL = "noreply@lumina-ai.com";
+
+// --- GLOBAL BETA SETTINGS ---
+const GLOBAL_BETA_ACTIVE = true; // Set to false after 6 months
+const BETA_MESSAGE = "Early Bird Beta Active - Enjoy Pro features for free!";
 
 /**
  * Handle incoming POST requests from the extension.
@@ -16,10 +20,15 @@ function doPost(e) {
 
     const ss = SpreadsheetApp.openById(SHEET_ID);
     const sheet = ss.getSheetByName("Licenses");
-    if (!sheet) return createJSON({ valid: false, message: "Database Error: sheet 'Licenses' not found." });
+    if (!sheet) return createJSON({ valid: false, message: "Database Error" });
 
     // --- ACTION: VERIFY ---
     if (action === "verify") {
+      // If Global Beta is active, everyone is Pro!
+      if (GLOBAL_BETA_ACTIVE) {
+        return createJSON({ valid: true, message: BETA_MESSAGE });
+      }
+
       const keyToCheck = data.licenseKey;
       if (!keyToCheck) return createJSON({ valid: false, message: "No key provided" });
 
@@ -30,17 +39,13 @@ function doPost(e) {
         const [email, key, active, createdAt, expiryDate] = rows[i];
         
         if (String(key).trim() === String(keyToCheck).trim()) {
-          // 1. Check if manually deactivated
           if (!(active === true || String(active).toUpperCase() === "TRUE")) {
              return createJSON({ valid: false, message: "License Revoked" });
           }
 
-          // 2. Check Expiry (AUTO-FLAG)
           if (expiryDate) {
             const exp = new Date(expiryDate);
-            if (now > exp) {
-               return createJSON({ valid: false, message: "License Expired. Renew at Lumina-ai.com" });
-            }
+            if (now > exp) return createJSON({ valid: false, message: "License Expired" });
           }
 
           return createJSON({ valid: true, message: "Active" });
@@ -54,33 +59,27 @@ function doPost(e) {
       const userEmail = data.email.toLowerCase().trim();
       if (!userEmail) return createJSON({ success: false, message: "Email required" });
 
-      // 1. Prevent duplicate active keys for same email
+      // Prevent duplicate active keys for same email
       const dataRange = sheet.getDataRange().getValues();
       for (let i = 1; i < dataRange.length; i++) {
         const [mail, key, active] = dataRange[i];
         if (mail.toLowerCase() === userEmail && (active === true || String(active).toUpperCase() === "TRUE")) {
-          return createJSON({ success: false, message: "An active key already exists for this email." });
+          return createJSON({ success: false, message: "An active key already exists." });
         }
       }
 
-      // 2. Generate key
       const key = "LUMINA-" + Utilities.getUuid().slice(0, 12).toUpperCase();
-
-      // 3. Calculate Expiry (1 Year from Now)
       const now = new Date();
       const expiry = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
 
-      // 4. Email via Resend
       const emailSent = sendEmailViaResend(
         userEmail,
         "Your Lumina Pro License Key 🚀",
-        `Hi there,<br><br>Thanks for choosing Lumina Pro!<br><br>Your Annual License Key: <b>${key}</b><br>Expiry Date: <b>${expiry.toLocaleDateString()}</b><br><br>Instructions:<br>1. Open Lumina extension settings.<br>2. Paste key and click Save.<br><br>Best,<br>Harsh Raj Singh`
+        `Hi there,<br><br>Thanks for choosing Lumina Pro!<br><br>Your Annual License Key: <b>${key}</b><br>Expiry Date: <b>${expiry.toLocaleDateString()}</b><br><br>Note: You have been granted this key during our Early Bird Beta launch. Enjoy!<br><br>Best,<br>Harsh Raj Singh`
       );
 
       if (emailSent) {
-        // 5. LOG TO SHEET
-        // Headers: [Email, LicenseKey, Active, CreatedAt, ExpiryDate, Status, PaymentVerified]
-        sheet.appendRow([userEmail, key, true, now, expiry, "SENT", "PENDING"]);
+        sheet.appendRow([userEmail, key, true, now, expiry, "SENT_BETA", "BETA_FREE"]);
         return createJSON({ success: true, message: "Key sent to your email!" });
       } else {
         return createJSON({ success: false, message: "Error sending email." });
@@ -96,7 +95,6 @@ function doPost(e) {
 
 /**
  * AUTOMATED EXPIRY REMINDERS
- * Setup a Daily Trigger for this function in Apps Script.
  */
 function SEND_EXPIRY_REMINDERS() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -108,65 +106,48 @@ function SEND_EXPIRY_REMINDERS() {
   
   for (let i = 1; i < data.length; i++) {
     const [email, key, active, createdAt, expiryDate] = data[i];
-    
-    // Only check active licenses
     if (!(active === true || String(active).toUpperCase() === "TRUE")) continue;
     if (!expiryDate) continue;
 
     const exp = new Date(expiryDate);
     const timeDiff = exp.getTime() - now.getTime();
     const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-    // Logic: 7, 5, 3, 1 days before expiry (alternate days starting week prior)
     const reminderDays = [7, 5, 3, 1];
     
     if (reminderDays.includes(daysRemaining)) {
       sendEmailViaResend(
         email,
         `Action Required: Your Lumina Pro License Expires in ${daysRemaining} Days! ⏳`,
-        `Hi there,<br><br>Just a friendly reminder that your Lumina Pro license (<b>${key}</b>) is set to expire on <b>${exp.toLocaleDateString()}</b> (only ${daysRemaining} days left).<br><br>To avoid any interruption in your productivity workflow, please renew your subscription soon.<br><br>Thank you,<br>Harsh Raj Singh`
+        `Hi there,<br><br>Your Lumina Pro license (<b>${key}</b>) expires soon.<br><br>Thank you,<br>Harsh Raj Singh`
       );
-      Logger.log(`Sent ${daysRemaining}-day reminder to ${email}`);
     }
   }
 }
 
 /**
- * Sends email using Resend API (allows custom domain)
+ * Sends email using Resend API
  */
 function sendEmailViaResend(to, subject, htmlContent) {
   if (RESEND_API_KEY === "REPLACE_WITH_RESEND_API_KEY") return false;
-
   const url = "https://api.resend.com/emails";
   const options = {
     method: "post",
-    headers: {
-      "Authorization": "Bearer " + RESEND_API_KEY,
-      "Content-Type": "application/json"
-    },
+    headers: { "Authorization": "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
     payload: JSON.stringify({
       from: "Lumina Pro <" + FROM_EMAIL + ">",
-      to: [to],
-      bcc: [ADMIN_EMAIL],
-      subject: subject,
-      html: htmlContent
+      to: [to], bcc: [ADMIN_EMAIL],
+      subject: subject, html: htmlContent
     }),
     muteHttpExceptions: true
   };
-
   try {
     const response = UrlFetchApp.fetch(url, options);
-    const code = response.getResponseCode();
-    return code === 200 || code === 201;
-  } catch (e) {
-    Logger.log("Fetch Error: " + e.toString());
-    return false;
-  }
+    return response.getResponseCode() < 300;
+  } catch (e) { return false; }
 }
 
 function createJSON(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
 
 // Manual Admin Tool
@@ -176,9 +157,9 @@ function MANUALLY_ISSUE_KEY() {
   const key = "LUMINA-" + Utilities.getUuid().slice(0, 12).toUpperCase();
   const now = new Date();
   const expiry = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
-  
   if (sendEmailViaResend(email, "Your Lumina License", "Key: " + key)) {
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName("Licenses");
     sheet.appendRow([email, key, true, now, expiry, "SENT_MANUAL", "YES"]);
   }
 }
+

@@ -1,9 +1,12 @@
 import { API_CONFIG } from '../config.js';
 
 export async function verifyGumroadLicense(licenseKey) {
+    // GLOBAL BETA Bypass
+    if (API_CONFIG.earlyBirdBeta) return { valid: true, message: "Free Beta Active" };
+
     if (!licenseKey) return { valid: false, message: "No key provided" };
 
-    // Dev bypass (Handled at UI level mostly, but good to have here too)
+    // Dev bypass
     if (API_CONFIG.developerMode) return { valid: true, message: "Dev Mode Active" };
 
     // Legacy local bypass
