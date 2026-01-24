@@ -94,7 +94,6 @@ export async function callDeepSeek(apiKey, screenshotUrl, promptText, onUpdate) 
         };
 
     } catch (error) {
-        console.error("DeepSeek API Error:", error);
         throw error;
     }
 }

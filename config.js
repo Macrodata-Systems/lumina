@@ -19,5 +19,17 @@ export const API_CONFIG = {
     deepseekKey: "",
 
     // Set to true to unlock all features for development
-    developerMode: true
+    developerMode: false,
+
+    // Your Google Apps Script Web App URL
+    licenseServerUrl: "",
+
+    // Stripe Payment Link (Optional)
+    stripePaymentLink: "",
+
+    // PayPal Link (e.g. paypal.me/yourname OR gumroad link)
+    paypalLink: "https://paypal.me/singhharsh199/6USD",
+
+    // UPI ID for Indian Users
+    upiId: "singhharsh199-1@okaxis"
 };

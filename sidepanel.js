@@ -10,6 +10,7 @@ import { callGemini } from './services/gemini.js';
 import { callOpenAI } from './services/openai.js';
 import { callAnthropic } from './services/anthropic.js';
 import { callDeepSeek } from './services/deepseek.js';
+import { verifyGumroadLicense } from './services/license.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const settingsBtn = document.getElementById('settings-btn');
@@ -30,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const licenseKeyInput = document.getElementById('license-key');
 
     // Load Settings & Theme
-    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey', 'theme', 'licenseKey', 'history'], (result) => {
+    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey', 'theme', 'licenseKey', 'licenseValid', 'history'], (result) => {
         if (result.geminiKey) geminiKeyInput.value = result.geminiKey;
         if (result.openaiKey) openaiKeyInput.value = result.openaiKey;
         if (result.anthropicKey) anthropicKeyInput.value = result.anthropicKey;
@@ -38,12 +39,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result.deepseekKey) deepseekKeyInput.value = result.deepseekKey;
         if (result.licenseKey) licenseKeyInput.value = result.licenseKey;
 
+        window.isLicenseValid = result.licenseValid || false;
+
         // Initialize history
         window.historyData = result.history || [];
 
         // Apply saved theme or default to light
         const currentTheme = result.theme || 'dark';
         applyTheme(currentTheme);
+
+        // Initial UI Update based on license
+        updateProSettingsVisibility();
     });
 
     // Theme Toggle Logic
@@ -125,18 +131,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Save Settings
-    saveSettingsBtn.addEventListener('click', () => {
+    // Save Settings
+    saveSettingsBtn.addEventListener('click', async () => {
+        saveSettingsBtn.textContent = 'Verifying...';
+
+        const licenseKey = licenseKeyInput.value.trim();
+        let licenseValid = false;
+
+        if (licenseKey) {
+            const verification = await verifyGumroadLicense(licenseKey);
+            if (verification.valid) {
+                licenseValid = true;
+            } else {
+                alert(`License Verification Failed: ${verification.message}`);
+                // Proceed to save but mark invalid
+            }
+        }
+
+        window.isLicenseValid = licenseValid;
+
         const keys = {
             geminiKey: geminiKeyInput.value.trim(),
             openaiKey: openaiKeyInput.value.trim(),
             anthropicKey: anthropicKeyInput.value.trim(),
             grokKey: grokKeyInput.value.trim(),
             deepseekKey: deepseekKeyInput.value.trim(),
-            licenseKey: licenseKeyInput.value.trim()
+            licenseKey: licenseKey,
+            licenseValid: licenseValid
         };
+
         chrome.storage.local.set(keys, () => {
-            alert('Settings saved!');
-            updateProSettingsVisibility(); // Update UI immediately
+            saveSettingsBtn.textContent = 'Save';
+            updateProSettingsVisibility();
+
+            if (licenseValid) {
+                alert('Settings Saved. Pro Features Unlocked! 🚀');
+            } else {
+                alert('Settings Saved.');
+            }
             backBtn.click();
         });
     });
@@ -595,8 +627,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function isPro() {
         if (API_CONFIG.developerMode) return true;
+        if (window.isLicenseValid) return true;
+
         const key = licenseKeyInput.value.trim();
-        return key.startsWith('LUMINA-PRO') || key.startsWith('TEST');
+        return key.startsWith('TEST'); // Only TEST keys bypass without server verification now
     }
 
     function saveToHistory(prompt, response, service) {
