@@ -10,7 +10,7 @@ Lumina allows you to explain anything on your screen using your favorite AI mode
 
 -   **Universal Capture**: Works on potentially any website (including restricted ones like LinkedIn) thanks to enhanced permissions.
 -   **Always-On Intelligence**: Automatically re-analyzes the page when you **switch tabs** or **navigate** to a new URL.
--   **Multi-Model Intelligence**: Get explanations from four leading AI models:
+-   **Multi-Model Intelligence**: Get explanations from five leading AI models:
     -   **Google Gemini 1.5 Flash**
     -   **OpenAI GPT-4o**
     -   **Anthropic Claude 3.5 Sonnet**
