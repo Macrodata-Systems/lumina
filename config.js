@@ -18,21 +18,6 @@ export const API_CONFIG = {
     grokKey: "",
     deepseekKey: "",
 
-    // Set to true to unlock all features and show technical settings (Gear icons, API tags)
-    developerMode: false,
-
-    // GLOBAL BETA: Set to true to give everyone PRO features for 6 months
-    earlyBirdBeta: true,
-
-    // Your Google Apps Script Web App URL
-    licenseServerUrl: "https://script.google.com/macros/s/AKfycbwkAOdRUy91qJ6eT-Xo9RxkeiURR31uXNwgJxrVEOmneCdoiES5y6PAZ8fHsUcQJYzY/exec",
-
-    // Stripe Payment Link (Optional)
-    stripePaymentLink: "",
-
-    // PayPal Link (e.g. paypal.me/yourname OR gumroad link)
-    paypalLink: "https://paypal.me/singhharsh199/6USD",
-
-    // UPI ID for Indian Users
-    upiId: "singhharsh199-1@okaxis"
+    // Set to true to unlock technical settings (Gear icons, API tags)
+    developerMode: false
 };
