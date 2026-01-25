@@ -1,25 +1,54 @@
-export async function callOpenAI(apiKey, base64Image, prompt = "explain") {
+export async function callOpenAI(apiKey, base64Image, prompt = "explain", conversationHistory = null) {
   const url = 'https://api.openai.com/v1/chat/completions';
 
-  const content = [{ type: "text", text: prompt }];
+  // Build messages array
+  let messages = [];
 
-  if (base64Image) {
-    content.push({
-      type: "image_url",
-      image_url: {
-        url: base64Image
-      }
+  if (conversationHistory && conversationHistory.length > 0) {
+    // Format conversation history for OpenAI API
+    messages = conversationHistory.map(msg => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.content
+    }));
+
+    // Add current prompt
+    const content = [{ type: "text", text: prompt }];
+
+    if (base64Image) {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: base64Image
+        }
+      });
+    }
+
+    messages.push({
+      role: "user",
+      content: content
     });
+  } else {
+    // Single-turn request (original behavior)
+    const content = [{ type: "text", text: prompt }];
+
+    if (base64Image) {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: base64Image
+        }
+      });
+    }
+
+    messages = [{
+      role: "user",
+      content: content
+    }];
   }
 
   const payload = {
     model: "gpt-4o",
-    messages: [
-      {
-        role: "user",
-        content: content
-      }
-    ],
+    messages: messages,
     max_tokens: 500
   };
 

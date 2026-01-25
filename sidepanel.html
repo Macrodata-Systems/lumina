@@ -15,7 +15,16 @@
     <div class="container">
 
 
-        <div id="main-view">
+        <div id="setup-view">
+            <div class="setup-content">
+                <div class="logo-large">💎</div>
+                <h1>Welcome to Lumina</h1>
+                <p>Your AI Copilot for the Web.</p>
+
+            </div>
+        </div>
+
+        <div id="main-view" class="hidden">
             <div class="controls-wrapper">
                 <div class="super-prompt-bar">
                     <!-- Left: Source Toggles -->
@@ -74,10 +83,7 @@
                         History</button>
                 </div>
 
-                <details id="query-details">
-                    <summary>View Constructed Query</summary>
-                    <div id="query-content">Waiting for request...</div>
-                </details>
+
 
 
             </div>
@@ -153,6 +159,24 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Global Footer Chat Prompt -->
+            <div id="global-chat-footer" class="hidden">
+                <div class="chat-input-container">
+                    <textarea class="chat-input" placeholder="Ask follow-up question.." rows="1"></textarea>
+                    <button id="chat-mic-btn" class="chat-send-btn" title="Voice Input"
+                        style="background: transparent; color: var(--text-secondary);">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                    <button class="chat-send-btn" title="Send message">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                    <button class="chat-clear-btn" title="Clear chat history">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+
         </div>
 
         <div id="settings-view" class="hidden">

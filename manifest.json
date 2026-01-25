@@ -9,12 +9,10 @@
         "storage",
         "sidePanel",
         "scripting",
-        "clipboardRead",
-        "geolocation"
+        "clipboardRead"
     ],
     "host_permissions": [
-        "<all_urls>",
-        "https://api.gumroad.com/*"
+        "<all_urls>"
     ],
     "action": {
         "default_title": "Lumina",

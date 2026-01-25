@@ -1,6 +1,8 @@
-# Lumina
+# Lumina - AI Copilot for the Web (v1.2)
 
-**Lumina** is a Chrome Extension that leverages the power of multiple GenAI models (Gemini, ChatGPT, and Claude) to explain *anything* currently visible on your screen. Whether it's a presentation slide, a complex research paper, a news article, or a data dashboard, **Lumina** provides instant, multi-perspective insights.
+**Lightweight, Private, and Powerful.**
+
+Lumina allows you to explain anything on your screen using your favorite AI models (Gemini, ChatGPT, Claude, Grok, DeepSeek). It is designed to be extremely lightweight (<200KB) and privacy-focused, running entirely in your browser with no external tracking.
 
 ![App Icon](assets/icon.png)
 

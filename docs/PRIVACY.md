@@ -8,7 +8,7 @@ Lumina ("we", "us", or "our") respects your privacy. This Privacy Policy outline
 ## 2. Data Collection
 We utilize a "Bring Your Own Key" (BYOK) architecture. 
 *   **We do NOT store your personal data** on our servers.
-*   **Page Content**: When you click "Explain", the text and/or screenshot of your active tab is temporarily sent to the AI provider you selected (Google Gemini, OpenAI, Anthropic, or DeepSeek) using your personal API key.
+*   **Page Content**: When you click "Explain", the text and/or screenshot of your active tab is temporarily sent to the AI provider you selected (Google Gemini, OpenAI, Claude, Grok, or DeepSeek) using your personal API key.
 *   **API Keys**: Your API keys are stored locally in your browser's storage (`chrome.storage.local`) and are never transmitted to us.
 
 ## 3. Data Usage
@@ -22,6 +22,7 @@ Lumina acts as a client interface for the following AI services. Their privacy p
 *   [Google Gemini Privacy](https://policies.google.com/privacy)
 *   [OpenAI Privacy](https://openai.com/privacy/)
 *   [Anthropic Privacy](https://www.anthropic.com/privacy)
+*   [xAI (Grok) Privacy](https://x.ai/privacy)
 *   [DeepSeek Privacy](https://www.deepseek.com/privacy)
 
 ## 5. Contact

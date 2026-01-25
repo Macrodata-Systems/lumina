@@ -16,27 +16,59 @@ async function listAvailableModels(apiKey) {
   }
 }
 
-export async function callGemini(apiKey, base64Image, prompt = "explain") {
+export async function callGemini(apiKey, base64Image, prompt = "explain", conversationHistory = null) {
   // Debug log confirms 1.5 is unavailable. Using 2.5-flash which IS available.
   const modelName = 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-  const parts = [{ text: prompt }];
+  // If we have conversation history, build multi-turn contents
+  let contents;
 
-  if (base64Image) {
-    const base64Data = base64Image.split(',')[1];
-    parts.push({
-      inline_data: {
-        mime_type: "image/jpeg",
-        data: base64Data
-      }
+  if (conversationHistory && conversationHistory.length > 0) {
+    // Format conversation history for Gemini API
+    contents = conversationHistory.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
+
+    // Add the current prompt as the latest user message
+    const currentParts = [{ text: prompt }];
+
+    if (base64Image) {
+      const base64Data = base64Image.split(',')[1];
+      currentParts.push({
+        inline_data: {
+          mime_type: "image/jpeg",
+          data: base64Data
+        }
+      });
+    }
+
+    contents.push({
+      role: 'user',
+      parts: currentParts
     });
+  } else {
+    // Single-turn request (original behavior)
+    const parts = [{ text: prompt }];
+
+    if (base64Image) {
+      const base64Data = base64Image.split(',')[1];
+      parts.push({
+        inline_data: {
+          mime_type: "image/jpeg",
+          data: base64Data
+        }
+      });
+    }
+
+    contents = [{
+      parts: parts
+    }];
   }
 
   const payload = {
-    contents: [{
-      parts: parts
-    }]
+    contents: contents
   };
 
   const response = await fetch(url, {

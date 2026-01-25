@@ -1,34 +1,71 @@
-export async function callAnthropic(apiKey, base64Image, prompt = "explain") {
+export async function callAnthropic(apiKey, base64Image, prompt = "explain", conversationHistory = null) {
   const url = 'https://api.anthropic.com/v1/messages';
 
-  const content = [];
+  // Build messages array
+  let messages = [];
 
-  if (base64Image) {
-    const base64Data = base64Image.split(',')[1];
+  if (conversationHistory && conversationHistory.length > 0) {
+    // Format conversation history for Anthropic API
+    messages = conversationHistory.map(msg => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.content
+    }));
+
+    // Add current prompt
+    const content = [];
+
+    if (base64Image) {
+      const base64Data = base64Image.split(',')[1];
+      content.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: "image/jpeg",
+          data: base64Data
+        }
+      });
+    }
+
     content.push({
-      type: "image",
-      source: {
-        type: "base64",
-        media_type: "image/jpeg",
-        data: base64Data
-      }
+      type: "text",
+      text: prompt
     });
-  }
 
-  content.push({
-    type: "text",
-    text: prompt
-  });
+    messages.push({
+      role: "user",
+      content: content
+    });
+  } else {
+    // Single-turn request (original behavior)
+    const content = [];
+
+    if (base64Image) {
+      const base64Data = base64Image.split(',')[1];
+      content.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: "image/jpeg",
+          data: base64Data
+        }
+      });
+    }
+
+    content.push({
+      type: "text",
+      text: prompt
+    });
+
+    messages = [{
+      role: "user",
+      content: content
+    }];
+  }
 
   const payload = {
     model: "claude-3-5-sonnet-20240620",
     max_tokens: 1024,
-    messages: [
-      {
-        role: "user",
-        content: content
-      }
-    ]
+    messages: messages
   };
 
   // Note: 'dangerouslyAllowBrowser' is a client-side SDK thing, for raw fetch we just need correct headers.
