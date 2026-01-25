@@ -20,8 +20,10 @@
                 <div class="super-prompt-bar">
                     <!-- Left: Source Toggles -->
                     <div class="source-toggles">
-                        <button id="toggle-screenshot" class="source-btn" title="Toggle Screenshot">📸</button>
-                        <button id="toggle-pagetext" class="source-btn active" title="Toggle Page Text">📄</button>
+                        <button id="toggle-screenshot" class="source-btn" title="Toggle Screenshot"><i
+                                class="fa-solid fa-camera"></i></button>
+                        <button id="toggle-pagetext" class="source-btn active" title="Toggle Page Text"><i
+                                class="fa-solid fa-file-lines"></i></button>
                     </div>
 
                     <!-- Center: Input -->
@@ -32,9 +34,12 @@
                     <!-- Right: Actions -->
                     <div class="action-buttons">
                         <div style="width: 1px; height: 16px; background: var(--border-color); margin: 0 4px;"></div>
-                        <button id="mic-btn" class="icon-action-btn" title="Voice Input">🎤</button>
-                        <button id="load-text-btn" class="icon-action-btn" title="Paste Page Text">📥</button>
-                        <button id="send-btn" class="icon-action-btn primary" title="Send">➤</button>
+                        <button id="mic-btn" class="icon-action-btn" title="Voice Input"><i
+                                class="fa-solid fa-microphone"></i></button>
+                        <button id="load-text-btn" class="icon-action-btn" title="Paste Page Text"><i
+                                class="fa-solid fa-file-import"></i></button>
+                        <button id="send-btn" class="icon-action-btn primary" title="Send"><i
+                                class="fa-solid fa-paper-plane"></i></button>
                     </div>
                 </div>
 
@@ -82,7 +87,8 @@
                     <div class="section-header">
                         <h3>Gemini Response</h3>
                         <div class="header-actions-small">
-                            <button class="refresh-btn" data-target="gemini" title="Refresh response">🔄</button>
+                            <button class="refresh-btn" data-target="gemini" title="Refresh response"><i
+                                    class="fa-solid fa-arrow-rotate-right"></i></button>
                             <button class="config-btn" data-target="gemini-key" title="Configure API key">⚙️</button>
                         </div>
                     </div>
@@ -92,7 +98,8 @@
                     <div class="section-header">
                         <h3>ChatGPT Response</h3>
                         <div class="header-actions-small">
-                            <button class="refresh-btn" data-target="openai" title="Refresh response">🔄</button>
+                            <button class="refresh-btn" data-target="openai" title="Refresh response"><i
+                                    class="fa-solid fa-arrow-rotate-right"></i></button>
                             <button class="config-btn" data-target="openai-key" title="Configure API key">⚙️</button>
                         </div>
                     </div>
@@ -102,7 +109,8 @@
                     <div class="section-header">
                         <h3>Claude Response</h3>
                         <div class="header-actions-small">
-                            <button class="refresh-btn" data-target="anthropic" title="Refresh response">🔄</button>
+                            <button class="refresh-btn" data-target="anthropic" title="Refresh response"><i
+                                    class="fa-solid fa-arrow-rotate-right"></i></button>
                             <button class="config-btn" data-target="anthropic-key" title="Configure API key">⚙️</button>
                         </div>
                     </div>
@@ -112,7 +120,8 @@
                     <div class="section-header">
                         <h3>Grok Response</h3>
                         <div class="header-actions-small">
-                            <button class="refresh-btn" data-target="grok" title="Refresh response">🔄</button>
+                            <button class="refresh-btn" data-target="grok" title="Refresh response"><i
+                                    class="fa-solid fa-arrow-rotate-right"></i></button>
                             <button class="config-btn" data-target="grok-key" title="Configure API key">⚙️</button>
                         </div>
                     </div>
@@ -122,7 +131,8 @@
                     <div class="section-header">
                         <h3>DeepSeek Response</h3>
                         <div class="header-actions-small">
-                            <button class="refresh-btn" data-target="deepseek" title="Refresh response">🔄</button>
+                            <button class="refresh-btn" data-target="deepseek" title="Refresh response"><i
+                                    class="fa-solid fa-arrow-rotate-right"></i></button>
                             <button class="config-btn" data-target="deepseek-key" title="Configure API key">⚙️</button>
                         </div>
                     </div>
@@ -133,21 +143,13 @@
                     <div class="section-header">
                         <h3>History</h3>
                         <div class="header-actions-small">
-                            <button id="clear-history-btn" title="Clear History">🗑️</button>
+                            <button id="clear-history-btn" title="Clear History" class="icon-action-btn"><i
+                                    class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </div>
                     <div class="history-list-container">
                         <!-- Items injected here -->
-                        <div class="empty-state">No history yet.</div>
-                    </div>
-                    <!-- Overlay for Non-Pro -->
-                    <div id="pro-overlay" class="hidden">
-                        <div class="pro-lock-content">
-                            <div class="lock-icon">🔒</div>
-                            <h3>Lumina Pro</h3>
-                            <p>Upgrade to unlock unlimited history and more.</p>
-                            <button id="unlock-pro-btn" class="primary-btn">Unlock Now</button>
-                        </div>
+                        <div class="empty-state">No history yet. Start explaining things!</div>
                     </div>
                 </div>
             </div>
@@ -164,14 +166,7 @@
                 <input type="password" id="gemini-key" placeholder="Enter Gemini API Key">
             </div>
 
-            <div class="input-group hidden" id="license-input-group">
-                <div class="label-row hidden">
-                    <label for="license-key" style="color: var(--primary-color);">Lumina Pro License</label>
-                    <a href="payment.html" target="_blank" class="help-link" id="buy-license-link"
-                        title="Purchase Lumina Pro">Get Pro</a>
-                </div>
-                <input class="hidden" type="text" id="license-key" placeholder="Enter Key (e.g. LUMINA-PRO-XXX)">
-            </div>
+
 
             <!-- Pro Settings (Hidden until unlocked) -->
             <div id="pro-model-settings" class="hidden">

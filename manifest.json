@@ -1,9 +1,9 @@
 {
     "manifest_version": 3,
     "name": "Lumina",
-    "version": "1.1",
+    "version": "1.2",
     "author": "Harsh Raj Singh",
-    "description": "Explain anything on your screen - Slides, Papers, News, Articles - using Gemini, OpenAI, and Claude.",
+    "description": "Explain anything on your screen - Slides, Papers, News, Articles - using ChatGPT, Gemini, Grok, DeepSeek and Claude.",
     "permissions": [
         "activeTab",
         "storage",

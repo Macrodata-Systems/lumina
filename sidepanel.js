@@ -10,7 +10,7 @@ import { callGemini } from './services/gemini.js';
 import { callOpenAI } from './services/openai.js';
 import { callAnthropic } from './services/anthropic.js';
 import { callDeepSeek } from './services/deepseek.js';
-import { verifyGumroadLicense } from './services/license.js';
+// License import removed for lightweight build
 
 document.addEventListener('DOMContentLoaded', () => {
     const settingsBtn = document.getElementById('settings-btn');
@@ -31,15 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const licenseKeyInput = document.getElementById('license-key');
 
     // Load Settings & Theme
-    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey', 'theme', 'licenseKey', 'licenseValid', 'history'], (result) => {
+    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey', 'theme', 'history'], (result) => {
         if (result.geminiKey) geminiKeyInput.value = result.geminiKey;
         if (result.openaiKey) openaiKeyInput.value = result.openaiKey;
         if (result.anthropicKey) anthropicKeyInput.value = result.anthropicKey;
         if (result.grokKey) grokKeyInput.value = result.grokKey;
         if (result.deepseekKey) deepseekKeyInput.value = result.deepseekKey;
-        if (result.licenseKey) licenseKeyInput.value = result.licenseKey;
+        // License key loading removed
 
-        window.isLicenseValid = result.licenseValid || false;
 
         // Initialize history
         window.historyData = result.history || [];
@@ -132,69 +131,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateProSettingsVisibility() {
+        // Simplified: Always show Pro settings in Developer Mode, or if keys exist?
+        // For lightweight version, if we are FREE, maybe we just show everything or hide advanced?
+        // Let's just always SHOW the input groups if they exist, or keep it simple.
+        // Actually, let's just show everything.
         const proSettings = document.getElementById('pro-model-settings');
-        const licenseGroup = document.getElementById('license-input-group');
-        const allConfigBtns = document.querySelectorAll('.config-btn');
-        const mainSettingsBtn = document.getElementById('settings-btn');
-
-        // 1. Pro Model Settings visibility (Enabled in Beta)
-        if (isPro()) {
-            proSettings.classList.remove('hidden');
-        } else {
-            proSettings.classList.add('hidden');
-        }
-
-        // 2. Technical UI Controls (Strictly developerMode only)
-        if (API_CONFIG.developerMode) {
-            if (licenseGroup) licenseGroup.classList.remove('hidden');
-            if (mainSettingsBtn) mainSettingsBtn.classList.remove('hidden');
-            allConfigBtns.forEach(btn => btn.classList.remove('hidden'));
-        } else {
-            if (licenseGroup) licenseGroup.classList.add('hidden');
-            if (mainSettingsBtn) mainSettingsBtn.classList.add('hidden');
-            allConfigBtns.forEach(btn => btn.classList.add('hidden'));
-        }
+        if (proSettings) proSettings.classList.remove('hidden');
     }
 
     // Save Settings
     // Save Settings
-    saveSettingsBtn.addEventListener('click', async () => {
-        saveSettingsBtn.textContent = 'Verifying...';
-
-        const licenseKey = licenseKeyInput.value.trim();
-        let licenseValid = false;
-
-        if (licenseKey) {
-            const verification = await verifyGumroadLicense(licenseKey);
-            if (verification.valid) {
-                licenseValid = true;
-            } else {
-                alert(`License Verification Failed: ${verification.message}`);
-                // Proceed to save but mark invalid
-            }
-        }
-
-        window.isLicenseValid = licenseValid;
+    // Save Settings (Simplified)
+    saveSettingsBtn.addEventListener('click', () => {
+        saveSettingsBtn.textContent = 'Saving...';
 
         const keys = {
             geminiKey: geminiKeyInput.value.trim(),
             openaiKey: openaiKeyInput.value.trim(),
             anthropicKey: anthropicKeyInput.value.trim(),
             grokKey: grokKeyInput.value.trim(),
-            deepseekKey: deepseekKeyInput.value.trim(),
-            licenseKey: licenseKey,
-            licenseValid: licenseValid
+            deepseekKey: deepseekKeyInput.value.trim()
         };
 
         chrome.storage.local.set(keys, () => {
             saveSettingsBtn.textContent = 'Save';
-            updateProSettingsVisibility();
-
-            if (licenseValid) {
-                alert('Settings Saved. Pro Features Unlocked! 🚀');
-            } else {
-                alert('Settings Saved.');
-            }
+            alert('Settings Saved!');
             backBtn.click();
         });
     });
@@ -211,6 +172,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
+    // Initial Tab Setup: Hide everything except Gemini
+    document.querySelectorAll('.result-section').forEach(sec => {
+        if (sec.id !== 'gemini-section') {
+            sec.style.display = 'none';
+            sec.classList.remove('active-section');
+        } else {
+            sec.style.display = 'block';
+            sec.classList.add('active-section');
+        }
+    });
+
     function switchTab(tabId) {
         // specific tab button
         tabBtns.forEach(btn => {
@@ -225,8 +197,10 @@ document.addEventListener('DOMContentLoaded', () => {
         resultSections.forEach(sec => {
             if (sec.id === tabId) {
                 sec.classList.add('active-section');
+                sec.style.display = 'block';
             } else {
                 sec.classList.remove('active-section');
+                sec.style.display = 'none';
             }
         });
 
@@ -368,16 +342,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // If no specific target valid, find the ACTIVE tab
+        if (!targetServices) {
+            const activeTabBtn = document.querySelector('.tab-btn.active');
+            if (activeTabBtn) {
+                const tabId = activeTabBtn.getAttribute('data-tab'); // e.g. gemini-section
+                // Extract service name from id: gemini-section -> gemini
+                const serviceName = tabId.replace('-section', '');
+                // Special map if needed (ChatGPT -> openai)
+                if (serviceName === 'openai') targetServices = ['openai'];
+                else if (serviceName === 'anthropic') targetServices = ['anthropic'];
+                else if (serviceName === 'gemini') targetServices = ['gemini'];
+                else if (serviceName === 'grok') targetServices = ['grok'];
+                else if (serviceName === 'deepseek') targetServices = ['deepseek'];
+                else targetServices = ['gemini']; // Fallback
+            } else {
+                targetServices = ['gemini']; // Default fallback
+            }
+        }
+
         const resultsContainer = document.getElementById('results-container');
         resultsContainer.classList.remove('hidden');
         explainBtn.classList.add('hidden');
 
         // Only show loading for targets
-        if (!targetServices || targetServices.includes('gemini')) updateSection('gemini-section', 'Loading...');
-        if (!targetServices || targetServices.includes('openai')) updateSection('openai-section', 'Loading...');
-        if (!targetServices || targetServices.includes('anthropic')) updateSection('anthropic-section', 'Loading...');
-        if (!targetServices || targetServices.includes('grok')) updateSection('grok-section', 'Loading...');
-        if (!targetServices || targetServices.includes('deepseek')) updateSection('deepseek-section', 'Loading...');
+        targetServices.forEach(srv => {
+            updateSection(`${srv}-section`, 'Loading...');
+        });
 
         const promptInputVal = promptInput.value.trim() || "";
 
@@ -448,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         updateSection('gemini-section', classFormatMarkdown(text));
                         saveToHistory(finalPrompt, text, 'Gemini');
                     })
-                    .catch(err => updateSection('gemini-section', 'Error: ' + err.message));
+                    .catch(err => updateSection('gemini-section', formatErrorMessage(err.message)));
             }
 
             if ((!targetServices || targetServices.includes('openai'))) {
@@ -464,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             updateSection('openai-section', classFormatMarkdown(text));
                             saveToHistory(finalPrompt, text, 'ChatGPT');
                         })
-                        .catch(err => updateSection('openai-section', 'Error: ' + err.message));
+                        .catch(err => updateSection('openai-section', formatErrorMessage(err.message)));
                 }
             }
 
@@ -477,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             updateSection('anthropic-section', classFormatMarkdown(text));
                             saveToHistory(finalPrompt, text, 'Claude');
                         })
-                        .catch(err => updateSection('anthropic-section', 'Error: ' + err.message));
+                        .catch(err => updateSection('anthropic-section', formatErrorMessage(err.message)));
                 } else {
                     updateSection('anthropic-section', 'API Key not configured.');
                 }
@@ -533,9 +524,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                 saveToHistory(finalPrompt, finalResult.content, 'DeepSeek');
                             }
                         })
-                        .catch(err => updateSection('deepseek-section', 'Error: ' + err.message));
+                        .catch(err => updateSection('deepseek-section', formatErrorMessage(err.message)));
                 } else {
-                    updateSection('deepseek-section', 'API Key not configured.');
+                    // Update: Don't show ugly error, show CTA
+                    updateSection('deepseek-section', `
+                        <div style="text-align: center; padding: 20px; opacity: 0.8;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">🦈</div>
+                            <p>Connect DeepSeek to use this model.</p>
+                            <button class="primary-btn" onclick="document.getElementById('settings-btn').click()" style="width: auto; margin-top: 10px;">Connect</button>
+                        </div>
+                    `);
                 }
             }
 
@@ -547,13 +545,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show error in all active targets if they are still "Loading..."
             if (!targetServices || targetServices.includes('gemini')) {
                 const el = document.querySelector('#gemini-section .content');
-                if (el && el.textContent === 'Loading...') updateSection('gemini-section', 'Error: ' + msg);
+                if (el && el.textContent === 'Loading...') updateSection('gemini-section', formatErrorMessage(msg));
             }
             if (!targetServices || targetServices.includes('deepseek')) {
                 const el = document.querySelector('#deepseek-section .content');
                 // For deepseek, if we already streamed something, maybe don't overwrite with error? 
                 // But if error is fatal, we should.
-                updateSection('deepseek-section', 'Error: ' + msg);
+                // But if error is fatal, we should.
+                updateSection('deepseek-section', formatErrorMessage(msg));
             }
         } finally {
             // Auto-cleanup memory
@@ -561,6 +560,30 @@ document.addEventListener('DOMContentLoaded', () => {
             pageText = null;
         }
     };
+
+    function formatErrorMessage(rawMsg) {
+        if (!rawMsg) return "Unknown Error";
+        const lower = rawMsg.toLowerCase();
+
+        if (lower.includes("quota") || lower.includes("rate limit") || lower.includes("429")) {
+            return "⚠️ Quota Exceeded. Please try again later or check your API limits.";
+        }
+        if (lower.includes("billing") || lower.includes("plan")) {
+            return "⚠️ Billing Issue. Please check your API account billing.";
+        }
+        if (lower.includes("key") || lower.includes("unauthorized") || lower.includes("401")) {
+            return "🔑 Invalid API Key. Please check settings.";
+        }
+        if (lower.includes("capture") || lower.includes("permission")) {
+            return "📷 Screen Capture Failed. Try reloading the page.";
+        }
+        if (lower.includes("overloaded") || lower.includes("503")) {
+            return "⚠️ Service Overloaded. Please retry in a moment.";
+        }
+
+        // Truncate generic errors
+        return "Error: " + (rawMsg.length > 80 ? rawMsg.substring(0, 80) + "..." : rawMsg);
+    }
 
     async function scrapePageText() {
         return new Promise((resolve) => {
@@ -598,12 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Ensure we run on initial load
-    if (settingsView.classList.contains('hidden')) {
-        setTimeout(startExplanation, 100);
-    }
 
-    // Keep button listener just in case or for retry
-    explainBtn.addEventListener('click', startExplanation);
 
     function updateSection(id, text) {
         // Simple MD replacement for newlines, bold, italics could be added here or use a library
@@ -653,14 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     /* History & License Logic */
 
-    function isPro() {
-        if (API_CONFIG.developerMode) return true;
-        if (API_CONFIG.earlyBirdBeta) return true;
-        if (window.isLicenseValid) return true;
 
-        const key = licenseKeyInput.value.trim();
-        return key.startsWith('TEST');
-    }
 
     function saveToHistory(prompt, response, service) {
         if (!prompt || !response) return;
@@ -686,20 +697,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderHistory() {
         const container = document.querySelector('.history-list-container');
-        const historySection = document.getElementById('history-section');
-
-        // Remove existing overlay if any
-        const existingOverlay = historySection.querySelector('.pro-overlay');
-        if (existingOverlay) existingOverlay.remove();
-
-        if (!isPro()) {
-            // Append new overlay
-            historySection.insertAdjacentHTML('beforeend', getLockOverlayHTML('Unlimited History'));
-            // Render blurred items
-            renderHistoryItems(container, window.historyData || [], true);
-            return;
-        }
-
         renderHistoryItems(container, window.historyData || []);
     }
 
@@ -712,20 +709,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         items.forEach(item => {
             const dateStr = new Date(item.date).toLocaleString();
+
+            // Clean up prompt for display
+            let cleanPrompt = item.prompt.replace(/Instruction: /, "").replace(/Instruction: /, "");
+            // Remove "Context from Page Text" clutter if present at start
+            if (cleanPrompt.startsWith("Context from")) cleanPrompt = "Page Context Analysis";
+
+            // Truncate length
+            if (cleanPrompt.length > 60) cleanPrompt = cleanPrompt.substring(0, 60) + "...";
+
             const el = document.createElement('div');
             el.className = 'history-item';
             el.innerHTML = `
                 <div class="history-date">${dateStr} • ${item.service}</div>
-                <div class="history-prompt">${item.prompt.replace(/Instruction: /, "").replace(/Instruction: /, "")}</div>
-                <div class="history-preview">${item.response.substring(0, 150)}...</div>
+                <div class="history-prompt">${cleanPrompt}</div>
+                <div class="history-preview">${item.response.substring(0, 100)}...</div>
             `;
 
+            // Add click handler
             el.addEventListener('click', () => {
-                if (!isPro()) return;
-                // Load into view
-                const tabId = item.service.toLowerCase() + '-section';
-                // Map service name to section ID if needed (ChatGPT -> openai)
-                let sectionId = tabId;
+                // Determine target section
+                let sectionId = item.service.toLowerCase() + '-section';
                 if (item.service === 'ChatGPT') sectionId = 'openai-section';
                 if (item.service === 'Claude') sectionId = 'anthropic-section';
                 if (item.service === 'Gemini') sectionId = 'gemini-section';
@@ -738,24 +742,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             container.appendChild(el);
         });
+
     }
-
-    // "Get Pro" link
-    document.getElementById('buy-license-link').addEventListener('click', () => {
-        chrome.tabs.create({ url: 'https://gumroad.com/l/lumina-pro-demo' });
-    });
-
-    // Delegation for dynamic unlock buttons
-    document.addEventListener('click', (e) => {
-        if (e.target && e.target.classList.contains('unlock-btn')) {
-            openSettings('license-key');
-        }
-
-        // Handle pro modal close button - switch to Gemini (safe fallback)
-        if (e.target && e.target.classList.contains('pro-close-btn')) {
-            switchTab('gemini-section');
-        }
-    });
 
     document.getElementById('clear-history-btn').addEventListener('click', () => {
         if (confirm('Clear all history?')) {
@@ -786,36 +774,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Could not paste. Please paste manually.');
             }
         }
-        // Hidden Developer Toggle (Click copyright 7 times)
-        let clickCount = 0;
-        const footerCopyright = document.querySelector('.footer-info p');
-        if (footerCopyright) {
-            footerCopyright.style.cursor = 'help';
-            footerCopyright.addEventListener('click', () => {
-                clickCount++;
-                if (clickCount >= 7) {
-                    API_CONFIG.developerMode = !API_CONFIG.developerMode;
-                    updateProSettingsVisibility();
-                    alert(`Developer Mode: ${API_CONFIG.developerMode ? 'ON (Tech UI Visible)' : 'OFF (User UI Clean)'}`);
-                    clickCount = 0;
-                }
-            });
-        }
     });
 
-    function getLockOverlayHTML(featureName) {
-        return `
-    <div class="pro-overlay">
-        <button class="pro-close-btn" title="Go Back">✕</button>
-        <div class="pro-lock-content">
-            <span class="lock-icon">🔒</span>
-            <h3>Lumina Pro</h3>
-            <p>Upgrade to unlock ${featureName} and more.</p>
-            <button class="primary-btn unlock-btn">Unlock Now</button>
-        </div>
-    </div>
-    `;
-    }
+
 
     /**
      * Call AI via Secure Backend Proxy (To hide developer keys)
