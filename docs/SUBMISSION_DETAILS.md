@@ -27,6 +27,7 @@ Instantly analyze the content of any tab—whether it’s a YouTube lecture, a P
     *   DeepSeek R1 (with Chain-of-Thought reasoning)
 
 *   **Visual Analysis:** "Snap" a screenshot of any chart, diagram, or UI and ask detailed questions.
+*   **Smart Text Selection:** Select any text on a webpage and click the "Explain with Lumina" popup for instant analysis.
 *   **Page Context:** Automatically reads the text of the webpage for context-aware summaries and answers.
 *   **Privacy-First:** Your data stays yours. Lumina runs entirely in your browser side-panel. We do not track your usage.
 

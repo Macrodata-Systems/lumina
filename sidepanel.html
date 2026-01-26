@@ -15,7 +15,33 @@
     <div class="container">
 
 
-        <div id="setup-view">
+        <div id="onboarding-view" class="hidden">
+            <div class="setup-content">
+                <div class="logo-large">✨</div>
+                <h1>Welcome to Lumina</h1>
+                <p>Your AI Second Brain in the browser.</p>
+
+                <div class="onboarding-steps">
+                    <div class="step">
+                        <div class="step-icon">1</div>
+                        <div class="step-text"><strong>Snap or Select</strong> content from any page.</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">2</div>
+                        <div class="step-text"><strong>Ask</strong> a question or click a summary chip.</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">3</div>
+                        <div class="step-text"><strong>Get Answers</strong> with your own API keys.</div>
+                    </div>
+                </div>
+
+                <button id="start-onboarding-btn" class="auth-continue-btn" style="margin-top: 20px;">Get
+                    Started</button>
+            </div>
+        </div>
+
+        <div id="setup-view" class="hidden">
             <div class="setup-content">
                 <div class="logo-large">💎</div>
                 <h1>Welcome to Lumina</h1>
@@ -54,15 +80,14 @@
 
                 <div class="chips-container">
                     <div class="chips">
-                        <button class="chip" data-prompt="Summarize this" title="Get a quick summary">Summary</button>
-                        <button class="chip" data-prompt="Guide me through learning this"
-                            title="Learn step-by-step">Guided Learning</button>
-                        <button class="chip" data-prompt="Do a deep research on this"
-                            title="Deep research analysis">Deep Research</button>
-                        <button class="chip" data-prompt="Track my work based on this" title="Track your progress">Track
-                            Work</button>
-                        <button class="chip" data-prompt="Give commentary on this"
-                            title="Get detailed commentary">Commentary</button>
+                        <button class="chip" data-prompt="Summarize this page"
+                            title="Get a quick summary of the page">Summarize Page</button>
+                        <button class="chip" data-prompt="Explain this page like I'm 5 years old"
+                            title="Simple explanation">Explain like I'm 5</button>
+                        <button class="chip" data-prompt="What are the key arguments in this text?"
+                            title="Find main points">Key Arguments</button>
+                        <button class="chip" data-prompt="What is this website about?" title="Identify purpose">Site
+                            Purpose</button>
                     </div>
 
                     <div class="header-actions">
@@ -74,11 +99,21 @@
                 <button id="explain-btn" class="hidden">Explain Page</button>
 
                 <div class="tabs">
-                    <button class="tab-btn" data-tab="openai-section" title="ChatGPT by OpenAI">🤖 ChatGPT</button>
-                    <button class="tab-btn active" data-tab="gemini-section" title="Gemini by Google">✨ Gemini</button>
-                    <button class="tab-btn" data-tab="anthropic-section" title="Claude by Anthropic">🧠 Claude</button>
-                    <button class="tab-btn" data-tab="grok-section" title="Grok by xAI">🤘 Grok</button>
-                    <button class="tab-btn" data-tab="deepseek-section" title="DeepSeek AI">🦈 DeepSeek</button>
+                    <button class="tab-btn active" data-tab="gemini-section" title="Gemini by Google">
+                        ✨ Gemini <span class="model-badge free">Free</span>
+                    </button>
+                    <button class="tab-btn" data-tab="openai-section" title="ChatGPT by OpenAI">
+                        🤖 ChatGPT <span class="model-badge">Reasoning</span>
+                    </button>
+                    <button class="tab-btn" data-tab="anthropic-section" title="Claude by Anthropic">
+                        🧠 Claude <span class="model-badge">Writing</span>
+                    </button>
+                    <button class="tab-btn" data-tab="grok-section" title="Grok by xAI">
+                        🤘 Grok <span class="model-badge">News</span>
+                    </button>
+                    <button class="tab-btn" data-tab="deepseek-section" title="DeepSeek AI">
+                        🦈 DeepSeek <span class="model-badge">Coding</span>
+                    </button>
                     <button class="tab-btn" data-tab="history-section" title="View conversation history">📜
                         History</button>
                 </div>

@@ -119,6 +119,20 @@ function debugToast(msg) {
 // --- GLOBAL UI LOCKS ---
 window.uiLocks = {};
 
+// Handle messages from content script (when sidepanel is ALREADY open)
+// Handle messages from content script (when sidepanel is ALREADY open)
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'explainText') {
+        const input = document.getElementById('custom-prompt');
+        const sendBtn = document.getElementById('send-btn');
+        if (input && sendBtn) {
+            input.value = `Explain "${message.text}" in reference to the page content.`;
+            // Switch to active tab if needed? Handled by user being on that tab mostly.
+            sendBtn.click();
+        }
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     debugToast('Extension Initialized. Checking Storage...');
     const settingsBtn = document.getElementById('settings-btn');
@@ -130,6 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Onboarding Elements
     const setupView = document.getElementById('setup-view');
+    const onboardingView = document.getElementById('onboarding-view');
+    const startOnboardingBtn = document.getElementById('start-onboarding-btn');
     const setupGeminiInput = document.getElementById('setup-gemini-key');
     const setupOpenaiInput = document.getElementById('setup-openai-key');
     const finishSetupBtn = document.getElementById('finish-setup-btn');
@@ -145,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const licenseKeyInput = document.getElementById('license-key');
 
     // Load Settings & Theme
-    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey', 'theme', 'history', 'updating_key'], (result) => {
+    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey', 'theme', 'history', 'updating_key', 'pending_explanation', 'hasCompletedOnboarding'], (result) => {
         if (result.geminiKey) geminiKeyInput.value = result.geminiKey;
         if (result.openaiKey) openaiKeyInput.value = result.openaiKey;
         if (result.anthropicKey) anthropicKeyInput.value = result.anthropicKey;
@@ -164,13 +180,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initial UI Update based on license
         updateProSettingsVisibility();
 
-        // SPLASH SCREEN LOGIC: Always start at Setup View
-        setupView.classList.remove('hidden');
-        mainView.classList.add('hidden');
-        mainView.classList.add('hidden');
-
         // Check keys but DON'T transition yet (Wait for Timeout)
         const hasKeys = result.geminiKey || result.openaiKey || result.anthropicKey || result.grokKey || result.deepseekKey;
+
+        // SPLASH SCREEN LOGIC: Determine Entry Point
+        if (!result.hasCompletedOnboarding && !hasKeys) {
+            // First time ever: Show Onboarding
+            onboardingView.classList.remove('hidden');
+            setupView.classList.add('hidden');
+        } else {
+            // Returning user or already set up
+            setupView.classList.remove('hidden');
+            onboardingView.classList.add('hidden');
+        }
+
+        mainView.classList.add('hidden');
 
         // Initialize UI Locks from storage
         if (result.updating_key) {
@@ -190,7 +214,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Auto-Summarize on Launch (User request: "query being sent when you land")
             // CRITICAL FIX: Do NOT auto-summarize if we are in the middle of updating a key!
-            if (hasKeys && !result.updating_key) {
+            if (result.pending_explanation) {
+                // Handle "Explain Selection" Flow
+                debugToast(' Explaining Selected Text...');
+                const input = document.getElementById('custom-prompt');
+                const sendBtn = document.getElementById('send-btn');
+
+                // Clear storage first
+                chrome.storage.local.remove('pending_explanation');
+
+                setTimeout(() => {
+                    if (input && sendBtn) {
+                        input.value = `Explain "${result.pending_explanation}" in reference to the page content.`;
+                        sendBtn.click();
+                    }
+                }, 800);
+            } else if (hasKeys && !result.updating_key) {
                 setTimeout(() => {
                     // PARANOID CHECK: Re-read storage to ensure no update started in the last 500ms
                     chrome.storage.local.get(['updating_key'], (latest) => {
@@ -230,6 +269,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (gKey) newKeys.geminiKey = gKey;
             if (oKey) newKeys.openaiKey = oKey;
 
+            // Also mark onboarding as complete
+            newKeys.hasCompletedOnboarding = true;
+
             chrome.storage.local.set(newKeys, () => {
                 // Update specific inputs in settings so they are ready
                 if (gKey) geminiKeyInput.value = gKey;
@@ -238,6 +280,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Unlock App
                 setupView.classList.add('hidden');
                 mainView.classList.remove('hidden');
+            });
+        });
+    }
+
+    // Onboarding Button
+    if (startOnboardingBtn) {
+        startOnboardingBtn.addEventListener('click', () => {
+            // Mark as complete immediately or just transition?
+            // Let's transition to Setup. We mark as complete when they actually finish setup.
+            // Or we mark it now so they don't see it again if they reload?
+            // Safer to mark now.
+            chrome.storage.local.set({ hasCompletedOnboarding: true }, () => {
+                onboardingView.classList.add('hidden');
+                setupView.classList.remove('hidden');
             });
         });
     }
