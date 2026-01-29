@@ -100,6 +100,63 @@ const modelKeyMap = {
     'deepseek-section': 'deepseekKey'
 };
 
+// --- SESSION EXPIRY MANAGEMENT ---
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+// Update last activity timestamp
+function updateLastActivity() {
+    chrome.storage.local.set({ lastActivity: Date.now() });
+}
+
+// Check if session has expired and clear data if needed
+function checkSessionExpiry() {
+    chrome.storage.local.get(['lastActivity'], (result) => {
+        const lastActivity = result.lastActivity || 0;
+        const now = Date.now();
+
+        if (lastActivity > 0 && now - lastActivity > SESSION_TIMEOUT) {
+            clearExpiredSessionData();
+        }
+    });
+}
+
+// Clear all storage except API keys
+function clearExpiredSessionData() {
+    chrome.storage.local.get(null, (allData) => {
+        // Extract only the API keys
+        const keysToKeep = {
+            geminiKey: allData.geminiKey || '',
+            openaiKey: allData.openaiKey || '',
+            anthropicKey: allData.anthropicKey || '',
+            grokKey: allData.grokKey || '',
+            deepseekKey: allData.deepseekKey || ''
+        };
+
+        // Clear ALL storage
+        chrome.storage.local.clear(() => {
+            // Restore only the API keys
+            chrome.storage.local.set(keysToKeep, () => {
+                // Clear in-memory conversation history
+                for (let service in conversationHistory) {
+                    conversationHistory[service] = [];
+                }
+
+                // Update UI to show clean state
+                const allSections = document.querySelectorAll('.content');
+                allSections.forEach(section => {
+                    section.innerHTML = `
+                        <div class="empty-state">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">✨</div>
+                            <p><strong>Session expired</strong></p>
+                            <p style="font-size: 0.9rem; opacity: 0.8;">Your data has been cleared for privacy. API keys preserved.</p>
+                        </div>
+                    `;
+                });
+            });
+        });
+    });
+}
+
 // --- Conversation History for Guided Learning ---
 const conversationHistory = {
     gemini: [],
@@ -143,6 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function declaration is hoisted!
     async function startExplanation(targetServices = null) {
+        // Update session activity
+        updateLastActivity();
 
         // useScreenshot and usePageText are now global module vars updated by buttons
 
@@ -280,75 +339,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     geminiCall
                         .then(text => {
-                            // Add user prompt to conversation history
-                            conversationHistory.gemini.push({
-                                role: 'user',
-                                content: finalPrompt
-                            });
+                            // Add to conversation history
+                            conversationHistory.gemini.push({ role: 'user', content: finalPrompt });
+                            conversationHistory.gemini.push({ role: 'assistant', content: text });
 
-                            // Add AI response to conversation history
-                            conversationHistory.gemini.push({
-                                role: 'assistant',
-                                content: text
-                            });
-
-                            // Render as chat message
+                            // Render as chat
                             renderChatMessage('assistant', text, 'gemini-section');
 
-                            // Setup chat interface with send handler
-                            setupChatInterface('gemini-section', async (followUpMessage) => {
-                                // Add user follow-up to history
-                                conversationHistory.gemini.push({
-                                    role: 'user',
-                                    content: followUpMessage
-                                });
+                            // Setup chat interface (follow-ups handled by triggerFollowUpChat)
+                            setupChatInterface('gemini-section');
 
-                                // Render user message
-                                renderChatMessage('user', followUpMessage, 'gemini-section');
-
-                                // Show typing indicator
-                                renderChatMessage('assistant', '...', 'gemini-section');
-
-                                try {
-                                    // Call Gemini with conversation history
-                                    const response = await callGemini(
-                                        keys.geminiKey,
-                                        null, // No screenshot for follow-ups
-                                        followUpMessage,
-                                        conversationHistory.gemini
-                                    );
-
-                                    // Remove typing indicator
-                                    const chatContainer = document.querySelector('#gemini-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') {
-                                        lastMessage.remove();
-                                    }
-
-                                    // Add response to history
-                                    conversationHistory.gemini.push({
-                                        role: 'assistant',
-                                        content: response
-                                    });
-
-                                    // Render response
-                                    renderChatMessage('assistant', response, 'gemini-section');
-
-                                    // Save to history
-                                    saveToHistory(followUpMessage, response, 'Gemini');
-                                } catch (err) {
-                                    // Remove typing indicator
-                                    const chatContainer = document.querySelector('#gemini-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') {
-                                        lastMessage.remove();
-                                    }
-
-                                    // Show error
-                                    renderChatMessage('assistant', `Error: ${err.message}`, 'gemini-section');
-                                }
-                            });
-
+                            // Save to history
                             saveToHistory(finalPrompt, text, 'Gemini');
                         })
                         .catch(err => handleApiError(err, 'gemini-section', 'geminiKey'));
@@ -375,31 +376,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Render as chat
                             renderChatMessage('assistant', text, 'openai-section');
 
-                            // Setup chat interface
-                            setupChatInterface('openai-section', async (followUpMessage) => {
-                                conversationHistory.openai.push({ role: 'user', content: followUpMessage });
-                                renderChatMessage('user', followUpMessage, 'openai-section');
-                                renderChatMessage('assistant', '...', 'openai-section');
+                            // Setup chat interface (follow-ups handled by triggerFollowUpChat)
+                            setupChatInterface('openai-section');
 
-                                try {
-                                    const response = await callOpenAI(keys.openaiKey, null, followUpMessage, conversationHistory.openai);
-
-                                    // Remove typing indicator
-                                    const chatContainer = document.querySelector('#openai-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
-
-                                    conversationHistory.openai.push({ role: 'assistant', content: response });
-                                    renderChatMessage('assistant', response, 'openai-section');
-                                    saveToHistory(followUpMessage, response, 'ChatGPT');
-                                } catch (err) {
-                                    const chatContainer = document.querySelector('#openai-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
-                                    renderChatMessage('assistant', `Error: ${err.message}`, 'openai-section');
-                                }
-                            });
-
+                            // Save to history
                             saveToHistory(finalPrompt, text, 'ChatGPT');
                         })
                         .catch(err => handleApiError(err, 'openai-section', 'openaiKey'));
@@ -421,31 +401,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Render as chat
                             renderChatMessage('assistant', text, 'anthropic-section');
 
-                            // Setup chat interface
-                            setupChatInterface('anthropic-section', async (followUpMessage) => {
-                                conversationHistory.anthropic.push({ role: 'user', content: followUpMessage });
-                                renderChatMessage('user', followUpMessage, 'anthropic-section');
-                                renderChatMessage('assistant', '...', 'anthropic-section');
+                            // Setup chat interface (follow-ups handled by triggerFollowUpChat)
+                            setupChatInterface('anthropic-section');
 
-                                try {
-                                    const response = await callAnthropic(keys.anthropicKey, null, followUpMessage, conversationHistory.anthropic);
-
-                                    // Remove typing indicator
-                                    const chatContainer = document.querySelector('#anthropic-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
-
-                                    conversationHistory.anthropic.push({ role: 'assistant', content: response });
-                                    renderChatMessage('assistant', response, 'anthropic-section');
-                                    saveToHistory(followUpMessage, response, 'Claude');
-                                } catch (err) {
-                                    const chatContainer = document.querySelector('#anthropic-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
-                                    renderChatMessage('assistant', `Error: ${err.message}`, 'anthropic-section');
-                                }
-                            });
-
+                            // Save to history
                             saveToHistory(finalPrompt, text, 'Claude');
                         })
                         .catch(err => handleApiError(err, 'anthropic-section', 'anthropicKey'));
@@ -457,24 +416,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (keys.grokKey) {
                     callGrok(keys.grokKey, screenshotUrl, finalPrompt, conversationHistory.grok)
                         .then(text => {
-                            renderChatMessage('assistant', text, 'grok-section');
-                            setupChatInterface('grok-section', async (followUpMessage) => {
-                                conversationHistory.grok.push({ role: 'user', content: followUpMessage });
-                                renderChatMessage('user', followUpMessage, 'grok-section');
-                                renderChatMessage('assistant', '...', 'grok-section', true); // Typing indicator
-
-                                try {
-                                    const response = await callGrok(keys.grokKey, screenshotUrl, followUpMessage, conversationHistory.grok);
-                                    removeTypingIndicator('grok-section');
-                                    renderChatMessage('assistant', response, 'grok-section');
-                                    conversationHistory.grok.push({ role: 'assistant', content: response });
-                                    saveToHistory(followUpMessage, response, 'Grok');
-                                } catch (err) {
-                                    removeTypingIndicator('grok-section');
-                                    renderChatMessage('assistant', formatErrorMessage(err.message, 'grok-section', 'grokKey'), 'grok-section');
-                                }
-                            });
+                            // Add to conversation history
+                            conversationHistory.grok.push({ role: 'user', content: finalPrompt });
                             conversationHistory.grok.push({ role: 'assistant', content: text });
+
+                            // Render as chat
+                            renderChatMessage('assistant', text, 'grok-section');
+
+                            // Setup chat interface (follow-ups handled by triggerFollowUpChat)
+                            setupChatInterface('grok-section');
+
+                            // Save to history
                             saveToHistory(finalPrompt, text, 'Grok');
                         })
                         .catch(err => handleApiError(err, 'grok-section', 'grokKey'));
@@ -513,6 +465,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (!finalResult.content && !finalResult.reasoning) {
                                 updateSection('deepseek-section', 'No content returned.');
                             } else {
+                                // Add to conversation history (for follow-up chats)
+                                conversationHistory.deepseek.push({ role: 'user', content: finalPrompt });
+                                conversationHistory.deepseek.push({ role: 'assistant', content: finalResult.content });
+
+                                // Setup chat interface (follow-ups handled by triggerFollowUpChat)
+                                setupChatInterface('deepseek-section');
+
+                                // Save to history
                                 saveToHistory(finalPrompt, finalResult.content, 'DeepSeek');
                             }
                         })
@@ -568,6 +528,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     });
 
+    // Check for expired session and update activity
+    checkSessionExpiry();
+    updateLastActivity();
+
     debugToast('Extension Initialized. Checking Storage...');
     const settingsBtn = document.getElementById('settings-btn');
     const mainView = document.getElementById('main-view');
@@ -620,9 +584,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initial UI Update based on license
         updateProSettingsVisibility();
 
-        // Load Auto-Summarize Preference (default: enabled)
-        const autoSummarizeEnabled = result.autoSummarizeEnabled !== false; // default true
-        updateAutoSummarizeButton(autoSummarizeEnabled);
+        // FORCE Auto-Summarize to always be ON (remove any stored OFF state)
+        chrome.storage.local.set({ autoSummarizeEnabled: true }, () => {
+            updateAutoSummarizeButton(true);
+        });
 
         // Check keys but DON'T transition yet (Wait for Timeout)
         const hasKeys = result.geminiKey || result.openaiKey || result.anthropicKey || result.grokKey || result.deepseekKey;
@@ -679,15 +644,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 }, 800);
-            } else if (hasKeys && !result.updating_key) {
+            } else if (!result.updating_key) {
+                // Auto-summarize on opening (even without keys - will show auth cards if needed)
                 setTimeout(() => {
-                    // PARANOID CHECK: Re-read storage to ensure no update started in the last 500ms
+                    // PARANOID CHECK: Re-read storage to ensure no update started
                     chrome.storage.local.get(['updating_key', 'autoSummarizeEnabled'], (latest) => {
                         const isAutoSummarizeEnabled = latest.autoSummarizeEnabled !== false;
                         if (!latest.updating_key && isAutoSummarizeEnabled) {
                             debugToast('Auto-Summarize Triggered');
-                            const summaryChip = document.querySelector('.chip[data-prompt^="Summarize"]');
-                            if (summaryChip) summaryChip.click();
+                            // Directly trigger explanation instead of clicking chip
+                            startExplanation();
                         } else {
                             if (latest.updating_key) {
                                 debugToast(`Auto-Summarize BLOCKED by Update Lock: ${latest.updating_key}`);
@@ -698,7 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }, 500);
             } else {
-                console.log('[Init] Auto-summarize skipped. HasKeys:', !!hasKeys, 'Updating:', result.updating_key);
+                // Auto-summarize logic is OFF or blocked
                 if (result.updating_key) debugToast(`Auto-Summarize Skipped (Update Active: ${result.updating_key})`);
             }
         }
@@ -872,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log(`[UpdateLink] updating_key set for ${sectionId}`);
                     const modelId = Object.keys(AI_MODELS).find(k => AI_MODELS[k].keyStorageName === keyName);
                     if (modelId) {
-                        console.log(`[UpdateLink] Clearing history for ${modelId} and opening URL`);
+                        // Clearing history and opening URL
                         debugToast(`Opening ${modelId} Website...`);
                         // Clear history to prevent restoring the error message
                         if (conversationHistory[modelId]) conversationHistory[modelId] = [];
@@ -1559,7 +1525,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     startExplanation();
                     debugToast("Auto-Summarize Triggered (Nav)");
                 } else {
-                    console.log("Auto-Summarize skipped (clean slate).");
+                    // Auto-Summarize skipped (clean slate)
                     // Optional: Clear previous results or show "Ready" state?
                     // For now, doing nothing is safer to avoid clearing user's manual work.
                 }
@@ -1651,7 +1617,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Simple MD replacement for newlines, bold, italics could be added here or use a library
         // For now, textContent is safe, innerHTML with some parsing is better
         const contentDiv = document.querySelector(`#${id} .content`);
-        contentDiv.innerHTML = text; // Assumes classFormatMarkdown returns safe HTML
+        contentDiv.innerHTML = text;
+
+        // Auto-scroll to bottom after DOM updates
+        requestAnimationFrame(() => {
+            contentDiv.scrollTo({ top: contentDiv.scrollHeight, behavior: 'smooth' });
+        });
     }
 
     // --- Chat Interface Functions for Guided Learning ---
@@ -1685,8 +1656,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chatContainer.appendChild(messageDiv);
 
-        // Auto-scroll to latest message
-        contentDiv.scrollTop = contentDiv.scrollHeight;
+        // Auto-scroll to latest message (more reliable method)
+        requestAnimationFrame(() => {
+            messageDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        });
     }
 
     function setupChatInterface(sectionId) {
@@ -1822,6 +1795,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function triggerFollowUpChat(service, message) {
+        // Update session activity (lightweight, async)
+        updateLastActivity();
+
         // Find existing chat container or create one
         const sectionId = `${service}-section`;
         const section = document.getElementById(sectionId);

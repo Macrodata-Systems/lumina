@@ -1,4 +1,4 @@
-console.log('Lumina: Content Script Loaded (v1.3.1 - Nuclear)');
+// Lumina: Content Script Loaded (v1.3.1)
 
 // Create Bubble Element (Direct Injection, No Shadow DOM to avoid complexity)
 const bubble = document.createElement('div');
@@ -39,7 +39,6 @@ document.addEventListener('mouseup', (e) => {
         const text = selection.toString().trim();
 
         if (text.length > 0) {
-            console.log('Lumina: Selection detected:', text.substring(0, 20) + '...');
             lastSelection = text;
 
             // 2. Get Coordinates
@@ -63,13 +62,10 @@ document.addEventListener('mouseup', (e) => {
                 bubble.style.top = `${top}px`;
                 bubble.style.left = `${left}px`;
                 bubble.style.display = 'flex';
-
-                console.log(`Lumina: Showing bubble at ${top}, ${left}`);
             } catch (err) {
                 console.error('Lumina: Error calculating specific position', err);
             }
         } else {
-            console.log('Lumina: Hiding bubble (no text)');
             bubble.style.display = 'none';
         }
     }, 50);
@@ -84,7 +80,6 @@ document.addEventListener('mousedown', (e) => {
 
 // Handle Click
 bubble.addEventListener('click', (e) => {
-    console.log('Lumina: Bubble Clicked');
     e.preventDefault();
     e.stopPropagation();
 

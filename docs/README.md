@@ -1,4 +1,4 @@
-# Lumina - AI Copilot for the Web (v1.2)
+# Lumina - AI Copilot for the Web (v1.3)
 
 **Lightweight, Private, and Powerful.**
 
@@ -9,11 +9,11 @@ Lumina allows you to explain anything on your screen using your favorite AI mode
 ## Features
 
 -   **Universal Capture**: Works on potentially any website (including restricted ones like LinkedIn) thanks to enhanced permissions.
--   **Always-On Intelligence**: Automatically re-analyzes the page when you **switch tabs** or **navigate** to a new URL.
+-   **Always-On Intelligence**: Automatically re-analyzes the page when you **switch tabs** or **navigate** to a new URL (can be toggled off).
 -   **Multi-Model Intelligence**: Get explanations from five leading AI models:
-    -   **Google Gemini 1.5 Flash**
-    -   **OpenAI GPT-4o**
-    -   **Anthropic Claude 3.5 Sonnet**
+    -   **Google Gemini 1.5 Flash** ⚡
+    -   **OpenAI GPT-4o** 🧠
+    -   **Anthropic Claude 3.5 Sonnet** 🎯
     -   **xAI Grok** 🤘
     -   **DeepSeek R1 (Reasoner)** 🦈
 -   **Super Prompt Bar**: A unified, pill-shaped input bar for all your interactions.
@@ -21,8 +21,9 @@ Lumina allows you to explain anything on your screen using your favorite AI mode
     -   **Page Text Loading (📥)**: Instantly grab text from the page to use in your prompt.
     -   **Smart Toggles**: Easily toggle Screenshot (📸) and Page Text (📄) context on/off.
 -   **Enhanced UI**:
-    -   **Marquee Chips**: Horizontal scrolling for quick prompts to save space.
-    -   **Scrollable Tabs**: Navigate easily between all 6 models on any screen size.
+    -   **Quick Prompt Chips**: Pre-configured prompts to get started quickly.
+    -   **Scrollable Tabs**: Navigate easily between all AI models on any screen size.
+    -   **Clean Interface**: Streamlined design with no clutter.
 -   **Chain of Thought Display**: See the reasoning process behind DeepSeek's answers in a dedicated collapsible section.
 -   **Focused Configuration**: Click the ⚙️ icon next to any model to quickly configure just that specific provider.
 -   **Side-by-Side Comparison**: Compare how different AIs interpret the same content in a single view.
@@ -30,7 +31,15 @@ Lumina allows you to explain anything on your screen using your favorite AI mode
 
 ## Installation
 
-Since this is a developer preview (unpacked extension):
+### From Chrome Web Store (Recommended)
+
+1. Visit the [Lumina Chrome Web Store page](https://chromewebstore.google.com/detail/lumina/fleclagpjeadgabepikpaajhbjbcobfg)
+2. Click **Add to Chrome**
+3. Follow the prompts to install
+
+### Developer Mode (Unpacked Extension)
+
+For testing or development:
 
 1.  **Clone/Download** this repository.
 2.  Open Chrome and navigate to `chrome://extensions`.
