@@ -86,10 +86,10 @@ export async function callGemini(apiKey, base64Image, prompt = "explain", conver
     const status = response.status;
 
     if (status === 400 && initialError.includes('API_KEY_INVALID')) {
-      throw new Error('⚠️ <strong>Invalid API Key</strong><br>Please check your settings.');
+      throw new Error('Invalid API Key');
     }
     if (status === 429 || initialError.includes('RESOURCE_EXHAUSTED')) {
-      throw new Error('⚠️ <strong>Quota Exceeded</strong><br>You hit the free tier limit. Please wait.');
+      throw new Error('Quota Exceeded');
     }
 
     // If model not found, try to find what IS available

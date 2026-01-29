@@ -52,50 +52,6 @@
 
         <div id="main-view" class="hidden">
             <div class="controls-wrapper">
-                <div class="super-prompt-bar">
-                    <!-- Left: Source Toggles -->
-                    <div class="source-toggles">
-                        <button id="toggle-screenshot" class="source-btn" title="Toggle Screenshot"><i
-                                class="fa-solid fa-camera"></i></button>
-                        <button id="toggle-pagetext" class="source-btn active" title="Toggle Page Text"><i
-                                class="fa-solid fa-file-lines"></i></button>
-                    </div>
-
-                    <!-- Center: Input -->
-                    <div class="input-wrapper">
-                        <textarea id="custom-prompt" placeholder="Ask AI... (Type or Speak)" rows="1"></textarea>
-                    </div>
-
-                    <!-- Right: Actions -->
-                    <div class="action-buttons">
-                        <div style="width: 1px; height: 16px; background: var(--border-color); margin: 0 4px;"></div>
-                        <button id="mic-btn" class="icon-action-btn" title="Voice Input"><i
-                                class="fa-solid fa-microphone"></i></button>
-                        <button id="load-text-btn" class="icon-action-btn" title="Paste Page Text"><i
-                                class="fa-solid fa-file-import"></i></button>
-                        <button id="send-btn" class="icon-action-btn primary" title="Send"><i
-                                class="fa-solid fa-paper-plane"></i></button>
-                    </div>
-                </div>
-
-                <div class="chips-container">
-                    <div class="chips">
-                        <button class="chip" data-prompt="Summarize this page"
-                            title="Get a quick summary of the page">Summarize Page</button>
-                        <button class="chip" data-prompt="Explain this page like I'm 5 years old"
-                            title="Simple explanation">Explain like I'm 5</button>
-                        <button class="chip" data-prompt="What are the key arguments in this text?"
-                            title="Find main points">Key Arguments</button>
-                        <button class="chip" data-prompt="What is this website about?" title="Identify purpose">Site
-                            Purpose</button>
-                    </div>
-
-                    <div class="header-actions">
-                        <button id="theme-toggle" class="icon-action-btn" title="Toggle Theme">🌙</button>
-                        <button id="settings-btn" class="icon-action-btn" title="Settings">⚙️</button>
-                    </div>
-                </div>
-
                 <button id="explain-btn" class="hidden">Explain Page</button>
 
                 <div class="tabs">
@@ -195,20 +151,40 @@
                 </div>
             </div>
 
-            <!-- Global Footer Chat Prompt -->
-            <div id="global-chat-footer" class="hidden">
+            <!-- Global Footer Chat Prompt (PRIMARY INPUT) -->
+            <div id="global-chat-footer">
                 <div class="chat-input-container">
-                    <textarea class="chat-input" placeholder="Ask follow-up question.." rows="1"></textarea>
-                    <button id="chat-mic-btn" class="chat-send-btn" title="Voice Input"
-                        style="background: transparent; color: var(--text-secondary);">
-                        <i class="fa-solid fa-microphone"></i>
-                    </button>
-                    <button class="chat-send-btn" title="Send message">
-                        <i class="fa-solid fa-paper-plane"></i>
-                    </button>
-                    <button class="chat-clear-btn" title="Clear chat history">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
+                    <textarea class="chat-input" id="main-chat-input" placeholder="Ask AI... (Press Enter to send)"
+                        rows="1"></textarea>
+                </div>
+            </div>
+
+            <!-- Action Bar (All icons in one row) - Below Chat -->
+            <div class="chips-container chips-footer">
+                <div class="chips">
+                    <button id="toggle-screenshot" class="source-btn chip" title="Toggle Screenshot"><i
+                            class="fa-solid fa-camera"></i></button>
+                    <button id="toggle-pagetext" class="source-btn active chip" title="Toggle Page Text"><i
+                            class="fa-solid fa-file-lines"></i></button>
+                    <div class="action-divider"></div>
+                    <button id="auto-summarize-toggle" class="icon-action-btn chip"
+                        title="Toggle Auto-Summarize">⚡</button>
+                    <button id="theme-toggle" class="icon-action-btn chip" title="Toggle Theme">🌙</button>
+                    <div class="action-divider"></div>
+                    <button id="mic-btn" class="icon-action-btn chip" title="Voice Input"><i
+                            class="fa-solid fa-microphone"></i></button>
+                    <button id="load-text-btn" class="icon-action-btn chip" title="Paste Page Text"><i
+                            class="fa-solid fa-file-import"></i></button>
+                </div>
+                <div class="chips">
+                    <button class="chip" data-prompt="Summarize this page"
+                        title="Get a quick summary of the page">Summarize Page</button>
+                    <button class="chip" data-prompt="Explain this page like I'm 5 years old"
+                        title="Simple explanation">Explain like I'm 5</button>
+                    <button class="chip" data-prompt="What are the key arguments in this text?"
+                        title="Find main points">Key Arguments</button>
+                    <button class="chip" data-prompt="What is this website about?" title="Identify purpose">Site
+                        Purpose</button>
                 </div>
             </div>
 

@@ -91,15 +91,41 @@ bubble.addEventListener('click', (e) => {
     // Visual Feedback
     bubble.textContent = '⚡ Opening...';
 
-    // Send Message
-    chrome.runtime.sendMessage({
-        action: 'explainText',
-        text: lastSelection
-    });
+    // Send Message (with safety check)
+    if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
+        try {
+            chrome.runtime.sendMessage({
+                action: 'explainText',
+                text: lastSelection
+            });
+        } catch (error) {
+            console.error('Lumina: Extension context invalidated. Please reload the page.', error);
+
+            // 1. Visual Feedback on Button
+            bubble.textContent = '⚠️ Reload page';
+            bubble.style.backgroundColor = '#ef4444';
+            bubble.style.color = 'white';
+
+            // 2. Explicit Alert to ensure user sees it
+            alert('Lumina Extension Updated: Please reload this page for changes to take effect.');
+
+            setTimeout(() => {
+                bubble.textContent = '✨ Explain with Lumina';
+                bubble.style.backgroundColor = '';
+                bubble.style.color = '';
+            }, 5000);
+        }
+    } else {
+        console.error('Lumina: Extension context invalidated. Please reload the page.');
+        bubble.textContent = '⚠️ Reload page';
+        setTimeout(() => {
+            bubble.textContent = '✨ Explain with Lumina';
+        }, 2000);
+    }
 
     // Reset after delay
     setTimeout(() => {
         bubble.style.display = 'none';
-        bubble.textContent = '✨ Explain with Lumina';
+        bubble.textContent = '✨ Explain with Lumina'; // CORRECTED TEXT
     }, 1000);
 });

@@ -14,6 +14,7 @@ import { callGrok } from './services/xai.js';
 // License import removed for lightweight build
 
 // --- AI Model Configuration ---
+// --- AI Model Configuration ---
 const AI_MODELS = {
     gemini: {
         displayName: 'Gemini',
@@ -90,6 +91,15 @@ const AI_MODELS = {
     }
 };
 
+// Helper Map for Key Lookups
+const modelKeyMap = {
+    'gemini-section': 'geminiKey',
+    'openai-section': 'openaiKey',
+    'anthropic-section': 'anthropicKey',
+    'grok-section': 'grokKey',
+    'deepseek-section': 'deepseekKey'
+};
+
 // --- Conversation History for Guided Learning ---
 const conversationHistory = {
     gemini: [],
@@ -98,7 +108,6 @@ const conversationHistory = {
     grok: [],
     deepseek: []
 };
-
 
 
 // --- DEBUG TOAST SYSTEM ---
@@ -119,27 +128,457 @@ function debugToast(msg) {
 // --- GLOBAL UI LOCKS ---
 window.uiLocks = {};
 
-// Handle messages from content script (when sidepanel is ALREADY open)
-// Handle messages from content script (when sidepanel is ALREADY open)
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'explainText') {
-        const input = document.getElementById('custom-prompt');
-        const sendBtn = document.getElementById('send-btn');
-        if (input && sendBtn) {
-            input.value = `Explain "${message.text}" in reference to the page content.`;
-            // Switch to active tab if needed? Handled by user being on that tab mostly.
-            sendBtn.click();
-        }
-    }
-});
+// -- Global State --
+let useScreenshot = false;
+let usePageText = true; // Default
 
+
+// --- Helper for Pro Checks ---
+function isPro() {
+    return true;
+}
+
+// Auto-Explain Logic
 document.addEventListener('DOMContentLoaded', () => {
+
+    // Function declaration is hoisted!
+    async function startExplanation(targetServices = null) {
+
+        // useScreenshot and usePageText are now global module vars updated by buttons
+
+        if (!useScreenshot && !usePageText) {
+            updateSection('gemini-section', 'Please select at least one source (Screenshot or Page Text).');
+            return;
+        }
+
+        // If no specific target valid, find the ACTIVE tab
+        if (!targetServices) {
+            const activeTabBtn = document.querySelector('.tab-btn.active');
+            if (activeTabBtn) {
+                const tabId = activeTabBtn.getAttribute('data-tab'); // e.g. gemini-section
+                // Extract service name from id: gemini-section -> gemini
+                const serviceName = tabId.replace('-section', '');
+                // Special map if needed (ChatGPT -> openai)
+                if (serviceName === 'openai') targetServices = ['openai'];
+                else if (serviceName === 'anthropic') targetServices = ['anthropic'];
+                else if (serviceName === 'gemini') targetServices = ['gemini'];
+                else if (serviceName === 'grok') targetServices = ['grok'];
+                else if (serviceName === 'deepseek') targetServices = ['deepseek'];
+                else targetServices = ['gemini']; // Fallback
+            } else {
+                targetServices = ['gemini']; // Default fallback
+            }
+        }
+
+        // Fetch keys using await (Promise-based in MV3)
+        const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey']);
+
+        const keys = {
+            geminiKey: storageKeys.geminiKey || API_CONFIG.geminiKey,
+            openaiKey: storageKeys.openaiKey || API_CONFIG.openaiKey,
+            anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
+            grokKey: storageKeys.grokKey || API_CONFIG.grokKey,
+            deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey
+        };
+
+        const resultsContainer = document.getElementById('results-container');
+        resultsContainer.classList.remove('hidden');
+        // explainBtn.classList.add('hidden'); // REMOVED: Element might not likely exist or is managed elsewhere
+
+        // Only show loading for targets IF they have keys
+        targetServices.forEach(srv => {
+            const requiredKeyName = modelKeyMap[`${srv}-section`];
+            const hasKey = keys[requiredKeyName];
+
+            // ...
+
+            if (hasKey) {
+                updateSection(`${srv}-section`, 'Loading...');
+            } else {
+                // No Key? Show Auth Card immediately (but only if not already shown)
+                const section = document.getElementById(`${srv}-section`);
+                if (section) {
+                    const contentDiv = section.querySelector('.content');
+                    const existingAuthCard = contentDiv?.querySelector('.auth-card');
+
+                    if (!existingAuthCard) {
+                        renderAuthCard(section, `${srv}-section`, requiredKeyName);
+                    }
+                    // If auth card already exists, preserve its state
+                }
+            }
+        });
+
+        const promptInput = document.getElementById('main-chat-input');
+        const promptInputVal = promptInput ? promptInput.value.trim() : "";
+
+        // Prepare variables to be cleared
+        let screenshotUrl = null;
+        let pageText = null;
+
+        try {
+            // Parallel Capture based on selection
+            const promises = [];
+            if (useScreenshot) promises.push(captureTab()); else promises.push(Promise.resolve(null));
+            if (usePageText) promises.push(scrapePageText()); else promises.push(Promise.resolve(""));
+
+            const [capturedUrl, capturedText] = await Promise.all(promises);
+
+            screenshotUrl = capturedUrl;
+            pageText = capturedText;
+
+            // Construct context-rich prompt
+            let finalPrompt = "";
+            let promptDisplay = ""; // For the UI view
+
+            if (promptInputVal) {
+                finalPrompt = `Instruction: ${promptInputVal}`;
+                promptDisplay = `Instruction: ${promptInputVal}`;
+            } else {
+                finalPrompt = `Explain this page.`;
+                promptDisplay = `Explain this page.`;
+            }
+
+            if (pageText) {
+                finalPrompt += `\n\nContext from Page Text:\n${pageText.substring(0, 3000)}...`;
+                promptDisplay += `\n\n[Attached Page Text: ${pageText.length} chars (truncated in view)]`;
+            }
+
+            if (screenshotUrl) {
+                promptDisplay += `\n[Attached Screenshot: Yes]`;
+            } else {
+                promptDisplay += `\n[Attached Screenshot: No]`;
+            }
+
+            // Update Query View
+
+
+            // Fetch keys using await (Promise-based in MV3)
+            // const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey']);
+
+            // Merge storage keys with hardcoded config keys (Storage takes precedence if user set one, otherwise Config)
+            // OR user might want Config to override? Usually Hardcode = Default.
+            // Let's allow Storage to override so the user can still change it in UI if they want, 
+            // but default to Config if Storage is empty.
+            // const keys = {
+            //     geminiKey: storageKeys.geminiKey || API_CONFIG.geminiKey,
+            //     openaiKey: storageKeys.openaiKey || API_CONFIG.openaiKey,
+            //     anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
+            //     grokKey: storageKeys.grokKey || API_CONFIG.grokKey,
+            //     deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey
+            // };
+
+            // Trigger explanations (Fire and forget, don't await completion to keep UI parallel)
+            if ((!targetServices || targetServices.includes('gemini'))) {
+                if (keys.geminiKey) {
+                    // Always use chat interface for all prompts
+                    const conversationContext = conversationHistory.gemini.length > 0 ? conversationHistory.gemini : null;
+
+                    const geminiCall = keys.geminiKey
+                        ? callGemini(keys.geminiKey, screenshotUrl, finalPrompt, conversationContext)
+                        : callAIProxy('gemini', finalPrompt, screenshotUrl);
+
+                    geminiCall
+                        .then(text => {
+                            // Add user prompt to conversation history
+                            conversationHistory.gemini.push({
+                                role: 'user',
+                                content: finalPrompt
+                            });
+
+                            // Add AI response to conversation history
+                            conversationHistory.gemini.push({
+                                role: 'assistant',
+                                content: text
+                            });
+
+                            // Render as chat message
+                            renderChatMessage('assistant', text, 'gemini-section');
+
+                            // Setup chat interface with send handler
+                            setupChatInterface('gemini-section', async (followUpMessage) => {
+                                // Add user follow-up to history
+                                conversationHistory.gemini.push({
+                                    role: 'user',
+                                    content: followUpMessage
+                                });
+
+                                // Render user message
+                                renderChatMessage('user', followUpMessage, 'gemini-section');
+
+                                // Show typing indicator
+                                renderChatMessage('assistant', '...', 'gemini-section');
+
+                                try {
+                                    // Call Gemini with conversation history
+                                    const response = await callGemini(
+                                        keys.geminiKey,
+                                        null, // No screenshot for follow-ups
+                                        followUpMessage,
+                                        conversationHistory.gemini
+                                    );
+
+                                    // Remove typing indicator
+                                    const chatContainer = document.querySelector('#gemini-section .chat-container');
+                                    const lastMessage = chatContainer.lastElementChild;
+                                    if (lastMessage && lastMessage.textContent.trim() === '...') {
+                                        lastMessage.remove();
+                                    }
+
+                                    // Add response to history
+                                    conversationHistory.gemini.push({
+                                        role: 'assistant',
+                                        content: response
+                                    });
+
+                                    // Render response
+                                    renderChatMessage('assistant', response, 'gemini-section');
+
+                                    // Save to history
+                                    saveToHistory(followUpMessage, response, 'Gemini');
+                                } catch (err) {
+                                    // Remove typing indicator
+                                    const chatContainer = document.querySelector('#gemini-section .chat-container');
+                                    const lastMessage = chatContainer.lastElementChild;
+                                    if (lastMessage && lastMessage.textContent.trim() === '...') {
+                                        lastMessage.remove();
+                                    }
+
+                                    // Show error
+                                    renderChatMessage('assistant', `Error: ${err.message}`, 'gemini-section');
+                                }
+                            });
+
+                            saveToHistory(finalPrompt, text, 'Gemini');
+                        })
+                        .catch(err => handleApiError(err, 'gemini-section', 'geminiKey'));
+                } else {
+                    // The UI already rendered an Auth Card for Gemini if the key was missing.
+                    // We don't need to do anything here, as the call won't be made.
+                    // If we wanted to support proxy as a fallback when no user key is present,
+                    // the logic would need to be adjusted to call `callAIProxy` here.
+                    // However, the current instruction implies we only proceed if a key (user or config) exists.
+                }
+            }
+
+            if ((!targetServices || targetServices.includes('openai'))) {
+                if (keys.openaiKey) {
+                    // Use chat interface for all prompts
+                    const conversationContext = conversationHistory.openai.length > 0 ? conversationHistory.openai : null;
+
+                    callOpenAI(keys.openaiKey, screenshotUrl, finalPrompt, conversationContext)
+                        .then(text => {
+                            // Add to conversation history
+                            conversationHistory.openai.push({ role: 'user', content: finalPrompt });
+                            conversationHistory.openai.push({ role: 'assistant', content: text });
+
+                            // Render as chat
+                            renderChatMessage('assistant', text, 'openai-section');
+
+                            // Setup chat interface
+                            setupChatInterface('openai-section', async (followUpMessage) => {
+                                conversationHistory.openai.push({ role: 'user', content: followUpMessage });
+                                renderChatMessage('user', followUpMessage, 'openai-section');
+                                renderChatMessage('assistant', '...', 'openai-section');
+
+                                try {
+                                    const response = await callOpenAI(keys.openaiKey, null, followUpMessage, conversationHistory.openai);
+
+                                    // Remove typing indicator
+                                    const chatContainer = document.querySelector('#openai-section .chat-container');
+                                    const lastMessage = chatContainer.lastElementChild;
+                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
+
+                                    conversationHistory.openai.push({ role: 'assistant', content: response });
+                                    renderChatMessage('assistant', response, 'openai-section');
+                                    saveToHistory(followUpMessage, response, 'ChatGPT');
+                                } catch (err) {
+                                    const chatContainer = document.querySelector('#openai-section .chat-container');
+                                    const lastMessage = chatContainer.lastElementChild;
+                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
+                                    renderChatMessage('assistant', `Error: ${err.message}`, 'openai-section');
+                                }
+                            });
+
+                            saveToHistory(finalPrompt, text, 'ChatGPT');
+                        })
+                        .catch(err => handleApiError(err, 'openai-section', 'openaiKey'));
+                }
+                // else: Auth Card already rendered
+            }
+
+            if ((!targetServices || targetServices.includes('anthropic'))) {
+                if (keys.anthropicKey) {
+                    // Use chat interface for all prompts
+                    const conversationContext = conversationHistory.anthropic.length > 0 ? conversationHistory.anthropic : null;
+
+                    callAnthropic(keys.anthropicKey, screenshotUrl, finalPrompt, conversationContext)
+                        .then(text => {
+                            // Add to conversation history
+                            conversationHistory.anthropic.push({ role: 'user', content: finalPrompt });
+                            conversationHistory.anthropic.push({ role: 'assistant', content: text });
+
+                            // Render as chat
+                            renderChatMessage('assistant', text, 'anthropic-section');
+
+                            // Setup chat interface
+                            setupChatInterface('anthropic-section', async (followUpMessage) => {
+                                conversationHistory.anthropic.push({ role: 'user', content: followUpMessage });
+                                renderChatMessage('user', followUpMessage, 'anthropic-section');
+                                renderChatMessage('assistant', '...', 'anthropic-section');
+
+                                try {
+                                    const response = await callAnthropic(keys.anthropicKey, null, followUpMessage, conversationHistory.anthropic);
+
+                                    // Remove typing indicator
+                                    const chatContainer = document.querySelector('#anthropic-section .chat-container');
+                                    const lastMessage = chatContainer.lastElementChild;
+                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
+
+                                    conversationHistory.anthropic.push({ role: 'assistant', content: response });
+                                    renderChatMessage('assistant', response, 'anthropic-section');
+                                    saveToHistory(followUpMessage, response, 'Claude');
+                                } catch (err) {
+                                    const chatContainer = document.querySelector('#anthropic-section .chat-container');
+                                    const lastMessage = chatContainer.lastElementChild;
+                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
+                                    renderChatMessage('assistant', `Error: ${err.message}`, 'anthropic-section');
+                                }
+                            });
+
+                            saveToHistory(finalPrompt, text, 'Claude');
+                        })
+                        .catch(err => handleApiError(err, 'anthropic-section', 'anthropicKey'));
+                }
+                // else: Auth Card already rendered
+            }
+
+            if ((!targetServices || targetServices.includes('grok'))) {
+                if (keys.grokKey) {
+                    callGrok(keys.grokKey, screenshotUrl, finalPrompt, conversationHistory.grok)
+                        .then(text => {
+                            renderChatMessage('assistant', text, 'grok-section');
+                            setupChatInterface('grok-section', async (followUpMessage) => {
+                                conversationHistory.grok.push({ role: 'user', content: followUpMessage });
+                                renderChatMessage('user', followUpMessage, 'grok-section');
+                                renderChatMessage('assistant', '...', 'grok-section', true); // Typing indicator
+
+                                try {
+                                    const response = await callGrok(keys.grokKey, screenshotUrl, followUpMessage, conversationHistory.grok);
+                                    removeTypingIndicator('grok-section');
+                                    renderChatMessage('assistant', response, 'grok-section');
+                                    conversationHistory.grok.push({ role: 'assistant', content: response });
+                                    saveToHistory(followUpMessage, response, 'Grok');
+                                } catch (err) {
+                                    removeTypingIndicator('grok-section');
+                                    renderChatMessage('assistant', formatErrorMessage(err.message, 'grok-section', 'grokKey'), 'grok-section');
+                                }
+                            });
+                            conversationHistory.grok.push({ role: 'assistant', content: text });
+                            saveToHistory(finalPrompt, text, 'Grok');
+                        })
+                        .catch(err => handleApiError(err, 'grok-section', 'grokKey'));
+                } else {
+                    // Auth Card already rendered by the initial check
+                }
+            }
+            if ((!targetServices || targetServices.includes('deepseek'))) {
+                if (keys.deepseekKey) {
+                    // Streaming implementation for DeepSeek
+                    callDeepSeek(keys.deepseekKey, screenshotUrl, finalPrompt, (partial) => {
+                        const { reasoning, content } = partial;
+
+                        // Preserve detail state if it exists
+                        const existingDetails = document.querySelector('#deepseek-section details');
+                        const wasOpen = existingDetails ? existingDetails.hasAttribute('open') : true; // Default to open while streaming
+
+                        const answerHtml = classFormatMarkdown(content);
+                        let finalHtml = answerHtml;
+
+                        if (reasoning) {
+                            const reasoningHtml = `
+                            <div class="reasoning-container">
+                                <details ${wasOpen ? 'open' : ''}>
+                                    <summary>🦈 DeepSeek Thought Process</summary>
+                                    <div class="reasoning-content">${reasoning.replace(/\n/g, '<br>')}</div>
+                                </details>
+                            </div>
+                        `;
+                            finalHtml = reasoningHtml + answerHtml;
+                        }
+
+                        updateSection('deepseek-section', finalHtml);
+                    })
+                        .then(finalResult => {
+                            if (!finalResult.content && !finalResult.reasoning) {
+                                updateSection('deepseek-section', 'No content returned.');
+                            } else {
+                                saveToHistory(finalPrompt, finalResult.content, 'DeepSeek');
+                            }
+                        })
+                        .catch(err => handleApiError(err, 'deepseek-section', 'deepseekKey'));
+                }
+                // else: Auth Card already rendered
+            }
+
+        } catch (err) {
+            console.error(err); // Log detailed error
+            let msg = err.message;
+            if (msg.includes("Cannot capture")) msg = "Could not capture page. Try reloading.";
+
+            // Show error in all active targets if they are still "Loading..."
+            if (!targetServices || targetServices.includes('gemini')) {
+                const el = document.querySelector('#gemini-section .content');
+                if (el && el.textContent === 'Loading...') updateSection('gemini-section', formatErrorMessage(msg));
+            }
+            if (!targetServices || targetServices.includes('deepseek')) {
+                const el = document.querySelector('#deepseek-section .content');
+                // For deepseek, if we already streamed something, maybe don't overwrite with error? 
+                // But if error is fatal, we should.
+                // But if error is fatal, we should.
+                updateSection('deepseek-section', formatErrorMessage(msg));
+            }
+        } finally {
+            // Auto-cleanup memory
+            screenshotUrl = null;
+            pageText = null;
+        }
+    };
+
+
+    // Handle messages from content script (when sidepanel is ALREADY open)
+    // Handle messages from content script (when sidepanel is ALREADY open)
+    // Handle messages from content script (when sidepanel is ALREADY open)
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.action === 'explainText') {
+            const input = document.getElementById('main-chat-input');
+            if (input) {
+                const query = `Explain "${message.text}" in reference to the page content.`;
+                input.value = query;
+
+                // Auto-Press Enter (Trigger Send)
+                const activeSec = document.querySelector('.active-section');
+                if (activeSec) {
+                    const service = activeSec.id.replace('-section', '');
+                    triggerFollowUpChat(service, query);
+                    setTimeout(() => input.value = '', 100);
+                }
+            }
+        }
+
+    });
+
     debugToast('Extension Initialized. Checking Storage...');
     const settingsBtn = document.getElementById('settings-btn');
     const mainView = document.getElementById('main-view');
     const settingsView = document.getElementById('settings-view');
     const backBtn = document.getElementById('back-btn');
     const saveSettingsBtn = document.getElementById('save-settings-btn');
+
+    // Define Global Elements EARLY
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const resultSections = document.querySelectorAll('.result-section');
+
     const explainBtn = document.getElementById('explain-btn');
 
     // Onboarding Elements
@@ -151,6 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const finishSetupBtn = document.getElementById('finish-setup-btn');
 
     const themeToggleBtn = document.getElementById('theme-toggle');
+    const autoSummarizeToggle = document.getElementById('auto-summarize-toggle');
 
     // Inputs
     const geminiKeyInput = document.getElementById('gemini-key');
@@ -161,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const licenseKeyInput = document.getElementById('license-key');
 
     // Load Settings & Theme
-    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey', 'theme', 'history', 'updating_key', 'pending_explanation', 'hasCompletedOnboarding'], (result) => {
+    chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey', 'theme', 'history', 'updating_key', 'pending_explanation', 'hasCompletedOnboarding', 'autoSummarizeEnabled'], (result) => {
         if (result.geminiKey) geminiKeyInput.value = result.geminiKey;
         if (result.openaiKey) openaiKeyInput.value = result.openaiKey;
         if (result.anthropicKey) anthropicKeyInput.value = result.anthropicKey;
@@ -179,6 +619,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Initial UI Update based on license
         updateProSettingsVisibility();
+
+        // Load Auto-Summarize Preference (default: enabled)
+        const autoSummarizeEnabled = result.autoSummarizeEnabled !== false; // default true
+        updateAutoSummarizeButton(autoSummarizeEnabled);
 
         // Check keys but DON'T transition yet (Wait for Timeout)
         const hasKeys = result.geminiKey || result.openaiKey || result.anthropicKey || result.grokKey || result.deepseekKey;
@@ -217,28 +661,39 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.pending_explanation) {
                 // Handle "Explain Selection" Flow
                 debugToast(' Explaining Selected Text...');
-                const input = document.getElementById('custom-prompt');
-                const sendBtn = document.getElementById('send-btn');
+                const input = document.getElementById('main-chat-input');
+                const sendBtn = document.getElementById('main-send-btn');
 
                 // Clear storage first
                 chrome.storage.local.remove('pending_explanation');
 
                 setTimeout(() => {
-                    if (input && sendBtn) {
+                    if (input) {
                         input.value = `Explain "${result.pending_explanation}" in reference to the page content.`;
-                        sendBtn.click();
+                        // Auto-Press Enter (Trigger Send)
+                        const activeSec = document.querySelector('.active-section') || document.getElementById('gemini-section');
+                        if (activeSec) {
+                            const service = activeSec.id.replace('-section', '');
+                            triggerFollowUpChat(service, input.value);
+                            setTimeout(() => input.value = '', 100);
+                        }
                     }
                 }, 800);
             } else if (hasKeys && !result.updating_key) {
                 setTimeout(() => {
                     // PARANOID CHECK: Re-read storage to ensure no update started in the last 500ms
-                    chrome.storage.local.get(['updating_key'], (latest) => {
-                        if (!latest.updating_key) {
+                    chrome.storage.local.get(['updating_key', 'autoSummarizeEnabled'], (latest) => {
+                        const isAutoSummarizeEnabled = latest.autoSummarizeEnabled !== false;
+                        if (!latest.updating_key && isAutoSummarizeEnabled) {
                             debugToast('Auto-Summarize Triggered');
                             const summaryChip = document.querySelector('.chip[data-prompt^="Summarize"]');
                             if (summaryChip) summaryChip.click();
                         } else {
-                            debugToast(`Auto-Summarize BLOCKED by Update Lock: ${latest.updating_key}`);
+                            if (latest.updating_key) {
+                                debugToast(`Auto-Summarize BLOCKED by Update Lock: ${latest.updating_key}`);
+                            } else {
+                                debugToast('Auto-Summarize is OFF');
+                            }
                         }
                     });
                 }, 500);
@@ -305,6 +760,27 @@ document.addEventListener('DOMContentLoaded', () => {
         applyTheme(newTheme);
     });
 
+    // Auto-Summarize Toggle Logic
+    if (autoSummarizeToggle) {
+        autoSummarizeToggle.addEventListener('click', () => {
+            chrome.storage.local.get(['autoSummarizeEnabled'], (result) => {
+                const currentState = result.autoSummarizeEnabled !== false; // default true
+                const newState = !currentState;
+                chrome.storage.local.set({ autoSummarizeEnabled: newState }, () => {
+                    updateAutoSummarizeButton(newState);
+                    debugToast(`Auto-Summarize: ${newState ? 'ON' : 'OFF'}`);
+                });
+            });
+        });
+    }
+
+    function updateAutoSummarizeButton(enabled) {
+        if (autoSummarizeToggle) {
+            autoSummarizeToggle.style.opacity = enabled ? '1' : '0.4';
+            autoSummarizeToggle.title = enabled ? 'Auto-Summarize: ON (Click to disable)' : 'Auto-Summarize: OFF (Click to enable)';
+        }
+    }
+
     function applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
         chrome.storage.local.set({ theme });
@@ -318,16 +794,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Navigation
-    settingsBtn.addEventListener('click', () => {
-        openSettings(); // No arg = show all
-    });
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            openSettings(); // No arg = show all
+        });
+    }
 
-    backBtn.addEventListener('click', () => {
-        settingsView.classList.add('hidden');
-        mainView.classList.remove('hidden');
-        settingsBtn.classList.remove('hidden');
-        document.querySelector('.header-actions').classList.remove('hidden');
-    });
+
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            settingsView.classList.add('hidden');
+            mainView.classList.remove('hidden');
+            if (settingsBtn) settingsBtn.classList.remove('hidden');
+            const headerActions = document.querySelector('.header-actions');
+            if (headerActions) headerActions.classList.remove('hidden');
+        });
+    }
+
 
     // Config Buttons Logic
     document.querySelectorAll('.config-btn').forEach(btn => {
@@ -406,7 +889,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function openSettings(focusId = null) {
         mainView.classList.add('hidden');
         settingsView.classList.remove('hidden');
-        settingsBtn.classList.add('hidden');
+        if (settingsBtn) settingsBtn.classList.add('hidden');
 
         // Manage visibility of all input groups
         const groups = settingsView.querySelectorAll('.input-group');
@@ -468,8 +951,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Tab Logic
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const resultSections = document.querySelectorAll('.result-section');
+    // defined at top of DOMContentLoaded
+
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -491,13 +974,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Map Tabs to required keys
-    const modelKeyMap = {
-        'gemini-section': 'geminiKey',
-        'openai-section': 'openaiKey',
-        'anthropic-section': 'anthropicKey',
-        'grok-section': 'grokKey',
-        'deepseek-section': 'deepseekKey'
-    };
+    // Map Tabs to required keys
+    // modelKeyMap is defined globally at top of file
 
     const modelNameMap = {
         'gemini-section': 'Gemini',
@@ -817,23 +1295,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Prompt Logic
-    const promptInput = document.getElementById('custom-prompt');
+    const promptInput = document.getElementById('main-chat-input');
     const chips = document.querySelectorAll('.chip');
-
 
 
     chips.forEach(chip => {
         chip.addEventListener('click', () => {
-            promptInput.value = chip.getAttribute('data-prompt');
-            startExplanation();
+            const query = chip.getAttribute('data-prompt');
+            // Only trigger if it's a prompt chip
+            if (promptInput && query) {
+                promptInput.value = query;
+
+                // Programmatic submission since button is gone
+                // Find active section to determine context
+                const activeSec = document.querySelector('.active-section');
+                if (activeSec) {
+                    const service = activeSec.id.replace('-section', '');
+                    triggerFollowUpChat(service, query);
+                    setTimeout(() => promptInput.value = '', 100);
+                }
+            }
         });
     });
 
-    promptInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            startExplanation();
-        }
-    });
+    if (promptInput) {
+        promptInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent newline
+                const query = promptInput.value.trim();
+                if (!query) return;
+
+                const activeSec = document.querySelector('.active-section');
+                if (activeSec) {
+                    const service = activeSec.id.replace('-section', '');
+                    triggerFollowUpChat(service, query);
+                    // Clear input immediately or after brief delay? 
+                    // Immediately is snappier.
+                    promptInput.value = '';
+                }
+            }
+        });
+    }
+
 
     // Refresh Buttons Logic
     document.querySelectorAll('.refresh-btn').forEach(btn => {
@@ -849,8 +1352,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Super Prompt Bar Logic
-    let useScreenshot = false;
-    let usePageText = true; // Default
+    // Super Prompt Bar Logic
+    // useScreenshot/usePageText defined globally at top
 
     const toggleScreenshotBtn = document.getElementById('toggle-screenshot');
     const togglePageTextBtn = document.getElementById('toggle-pagetext');
@@ -868,6 +1371,20 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleScreenshotBtn.addEventListener('click', () => {
         useScreenshot = !useScreenshot;
         updateToggleUI();
+
+        // Auto-populate prompt if empty and turning ON
+        if (useScreenshot && promptInput.value.trim() === '') {
+            const query = "Explain the screenshot";
+            promptInput.value = query;
+
+            // Auto-Press Enter (Trigger Send)
+            const activeSec = document.querySelector('.active-section');
+            if (activeSec) {
+                const service = activeSec.id.replace('-section', '');
+                triggerFollowUpChat(service, query);
+                setTimeout(() => promptInput.value = '', 100);
+            }
+        }
     });
 
     togglePageTextBtn.addEventListener('click', () => {
@@ -916,6 +1433,88 @@ document.addEventListener('DOMContentLoaded', () => {
         micBtn.style.display = 'none'; // Hide if not supported
     }
 
+    // --- Helper Functions ---
+
+    function formatErrorMessage(msg, sectionId = null, keyName = null) {
+        let displayMsg = msg;
+        let isCritical = false;
+
+        if (msg === "Quota Exceeded") {
+            displayMsg = "Quota Exceeded";
+            isCritical = true;
+        } else if (msg === "Invalid API Key") {
+            displayMsg = "Invalid API Key";
+            isCritical = true;
+        }
+
+        let html = `<div class="error-message">⚠️ ${displayMsg}</div>`;
+
+        // If it's an API Key error, show a quick link to update it
+        if (isCritical || msg.toLowerCase().includes("api key") || msg.toLowerCase().includes("unauthorized") || msg.toLowerCase().includes("quota")) {
+            if (sectionId && keyName) {
+                const helperText = (msg === "Quota Exceeded" || msg.toLowerCase().includes("quota"))
+                    ? "Your free tier quota is exhausted. Please wait or use a different key."
+                    : "Your API key appears to be invalid.";
+
+                html += `
+                    <div style="margin-top: 10px;">
+                         <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 8px;">
+                            ${helperText}
+                        </p>
+                        <a href="#" class="update-key-link" data-section="${sectionId}" data-key="${keyName}" style="color: #ef4444; text-decoration: underline; font-size: 0.9rem;">
+                           Update API Key
+                        </a>
+                    </div>
+                `;
+            }
+        }
+        return html;
+    }
+
+    function handleApiError(err, sectionId, keyName) {
+        console.error(`API Error (${sectionId}):`, err);
+        let msg = err.message || "Unknown error occurred.";
+
+        // Fix for object error (DeepSeek sometimes returns object)
+        if (typeof msg === 'object') msg = JSON.stringify(msg);
+
+        updateSection(sectionId, formatErrorMessage(msg, sectionId, keyName));
+    }
+
+    async function scrapePageText() {
+        return new Promise((resolve) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (!tabs || tabs.length === 0) {
+                    resolve('');
+                    return;
+                }
+                const activeTab = tabs[0];
+
+                // IGNORE: chrome://, edge://, about:blank, etc.
+                if (activeTab.url && (activeTab.url.startsWith('chrome://') || activeTab.url.startsWith('edge://') || activeTab.url.startsWith('about:') || activeTab.url.startsWith('chrome-extension://'))) {
+                    resolve('');
+                    return;
+                }
+
+                chrome.scripting.executeScript({
+                    target: { tabId: activeTab.id },
+                    func: () => {
+                        // Better text extraction using Readability logic (simplified)
+                        // Or just document.body.innerText for now
+                        return document.body.innerText;
+                    }
+                }, (results) => {
+                    if (chrome.runtime.lastError || !results || !results[0]) {
+                        console.warn("Scripting error or restricted page:", chrome.runtime.lastError);
+                        resolve('');
+                    } else {
+                        resolve(results[0].result || '');
+                    }
+                });
+            });
+        });
+    }
+
     // Load Text logic
     loadTextBtn.addEventListener('click', async () => {
         loadTextBtn.style.opacity = '0.5';
@@ -923,7 +1522,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (text) {
             // promptInput.value += "\n\n" + text; // Append or Replace? User asked to "load it on the prompt box"
             // Usually replacing or filling is better context. Let's append if exists.
-            promptInput.value = text; // "load it on the prompt box" implies populating it
+            const query = "Explain this page:\n\n" + text;
+            promptInput.value = query;
+
+            // Auto-Press Enter (Trigger Send)
+            const activeSec = document.querySelector('.active-section');
+            if (activeSec) {
+                const service = activeSec.id.replace('-section', '');
+                triggerFollowUpChat(service, query);
+                setTimeout(() => promptInput.value = '', 100);
+            }
+
             loadTextBtn.style.color = 'var(--primary-color)';
             setTimeout(() => {
                 loadTextBtn.style.color = '';
@@ -935,501 +1544,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Send Button
-    sendBtn.addEventListener('click', () => startExplanation());
+    // Send Button logic removed (migrated to Enter key)
 
-
-    // Auto-Explain Logic
-    // Send Button
-    sendBtn.addEventListener('click', () => startExplanation());
-
-    // --- Helper for Pro Checks ---
-    function isPro() {
-        return true;
-    }
-
-    // Auto-Explain Logic
-    const startExplanation = async (targetServices = null) => {
-        // useScreenshot and usePageText are now global module vars updated by buttons
-
-        if (!useScreenshot && !usePageText) {
-            updateSection('gemini-section', 'Please select at least one source (Screenshot or Page Text).');
-            return;
-        }
-
-        // If no specific target valid, find the ACTIVE tab
-        if (!targetServices) {
-            const activeTabBtn = document.querySelector('.tab-btn.active');
-            if (activeTabBtn) {
-                const tabId = activeTabBtn.getAttribute('data-tab'); // e.g. gemini-section
-                // Extract service name from id: gemini-section -> gemini
-                const serviceName = tabId.replace('-section', '');
-                // Special map if needed (ChatGPT -> openai)
-                if (serviceName === 'openai') targetServices = ['openai'];
-                else if (serviceName === 'anthropic') targetServices = ['anthropic'];
-                else if (serviceName === 'gemini') targetServices = ['gemini'];
-                else if (serviceName === 'grok') targetServices = ['grok'];
-                else if (serviceName === 'deepseek') targetServices = ['deepseek'];
-                else targetServices = ['gemini']; // Fallback
-            } else {
-                targetServices = ['gemini']; // Default fallback
-            }
-        }
-
-        // Fetch keys using await (Promise-based in MV3)
-        const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey']);
-
-        const keys = {
-            geminiKey: storageKeys.geminiKey || API_CONFIG.geminiKey,
-            openaiKey: storageKeys.openaiKey || API_CONFIG.openaiKey,
-            anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
-            grokKey: storageKeys.grokKey || API_CONFIG.grokKey,
-            deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey
-        };
-
-        const resultsContainer = document.getElementById('results-container');
-        resultsContainer.classList.remove('hidden');
-        explainBtn.classList.add('hidden');
-
-        // Only show loading for targets IF they have keys
-        targetServices.forEach(srv => {
-            const requiredKeyName = modelKeyMap[`${srv}-section`];
-            const hasKey = keys[requiredKeyName];
-
-            // Special Case: Grok/DeepSeek might allow Pro use without key? 
-            // Current logic requires key or Pro. 
-            // For now, if we have a key OR we are just showing "Loading...", let's be strict.
-            // Actually, callGemini/etc handle the proxy fallback if Config key is present.
-            // My keys object already merges Config keys. 
-            // So if keys[requiredKeyName] is truthy, we are good to go.
-
-            if (hasKey) {
-                updateSection(`${srv}-section`, 'Loading...');
-            } else {
-                // No Key? Show Auth Card immediately (but only if not already shown)
-                const section = document.getElementById(`${srv}-section`);
-                if (section) {
-                    const contentDiv = section.querySelector('.content');
-                    const existingAuthCard = contentDiv?.querySelector('.auth-card');
-
-                    if (!existingAuthCard) {
-                        renderAuthCard(section, `${srv}-section`, requiredKeyName);
-                    }
-                    // If auth card already exists, preserve its state
-                }
-            }
-        });
-
-        const promptInputVal = promptInput.value.trim() || "";
-
-        // Prepare variables to be cleared
-        let screenshotUrl = null;
-        let pageText = null;
-
-        try {
-            // Parallel Capture based on selection
-            const promises = [];
-            if (useScreenshot) promises.push(captureTab()); else promises.push(Promise.resolve(null));
-            if (usePageText) promises.push(scrapePageText()); else promises.push(Promise.resolve(""));
-
-            const [capturedUrl, capturedText] = await Promise.all(promises);
-
-            screenshotUrl = capturedUrl;
-            pageText = capturedText;
-
-            // Construct context-rich prompt
-            let finalPrompt = "";
-            let promptDisplay = ""; // For the UI view
-
-            if (promptInputVal) {
-                finalPrompt = `Instruction: ${promptInputVal}`;
-                promptDisplay = `Instruction: ${promptInputVal}`;
-            } else {
-                finalPrompt = `Explain this page.`;
-                promptDisplay = `Explain this page.`;
-            }
-
-            if (pageText) {
-                finalPrompt += `\n\nContext from Page Text:\n${pageText.substring(0, 3000)}...`;
-                promptDisplay += `\n\n[Attached Page Text: ${pageText.length} chars (truncated in view)]`;
-            }
-
-            if (screenshotUrl) {
-                promptDisplay += `\n[Attached Screenshot: Yes]`;
-            } else {
-                promptDisplay += `\n[Attached Screenshot: No]`;
-            }
-
-            // Update Query View
-
-
-            // Fetch keys using await (Promise-based in MV3)
-            // const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey']);
-
-            // Merge storage keys with hardcoded config keys (Storage takes precedence if user set one, otherwise Config)
-            // OR user might want Config to override? Usually Hardcode = Default.
-            // Let's allow Storage to override so the user can still change it in UI if they want, 
-            // but default to Config if Storage is empty.
-            // const keys = {
-            //     geminiKey: storageKeys.geminiKey || API_CONFIG.geminiKey,
-            //     openaiKey: storageKeys.openaiKey || API_CONFIG.openaiKey,
-            //     anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
-            //     grokKey: storageKeys.grokKey || API_CONFIG.grokKey,
-            //     deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey
-            // };
-
-            // Trigger explanations (Fire and forget, don't await completion to keep UI parallel)
-            if ((!targetServices || targetServices.includes('gemini'))) {
-                if (keys.geminiKey) {
-                    // Always use chat interface for all prompts
-                    const conversationContext = conversationHistory.gemini.length > 0 ? conversationHistory.gemini : null;
-
-                    const geminiCall = keys.geminiKey
-                        ? callGemini(keys.geminiKey, screenshotUrl, finalPrompt, conversationContext)
-                        : callAIProxy('gemini', finalPrompt, screenshotUrl);
-
-                    geminiCall
-                        .then(text => {
-                            // Add user prompt to conversation history
-                            conversationHistory.gemini.push({
-                                role: 'user',
-                                content: finalPrompt
-                            });
-
-                            // Add AI response to conversation history
-                            conversationHistory.gemini.push({
-                                role: 'assistant',
-                                content: text
-                            });
-
-                            // Render as chat message
-                            renderChatMessage('assistant', text, 'gemini-section');
-
-                            // Setup chat interface with send handler
-                            setupChatInterface('gemini-section', async (followUpMessage) => {
-                                // Add user follow-up to history
-                                conversationHistory.gemini.push({
-                                    role: 'user',
-                                    content: followUpMessage
-                                });
-
-                                // Render user message
-                                renderChatMessage('user', followUpMessage, 'gemini-section');
-
-                                // Show typing indicator
-                                renderChatMessage('assistant', '...', 'gemini-section');
-
-                                try {
-                                    // Call Gemini with conversation history
-                                    const response = await callGemini(
-                                        keys.geminiKey,
-                                        null, // No screenshot for follow-ups
-                                        followUpMessage,
-                                        conversationHistory.gemini
-                                    );
-
-                                    // Remove typing indicator
-                                    const chatContainer = document.querySelector('#gemini-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') {
-                                        lastMessage.remove();
-                                    }
-
-                                    // Add response to history
-                                    conversationHistory.gemini.push({
-                                        role: 'assistant',
-                                        content: response
-                                    });
-
-                                    // Render response
-                                    renderChatMessage('assistant', response, 'gemini-section');
-
-                                    // Save to history
-                                    saveToHistory(followUpMessage, response, 'Gemini');
-                                } catch (err) {
-                                    // Remove typing indicator
-                                    const chatContainer = document.querySelector('#gemini-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') {
-                                        lastMessage.remove();
-                                    }
-
-                                    // Show error
-                                    renderChatMessage('assistant', `Error: ${err.message}`, 'gemini-section');
-                                }
-                            });
-
-                            saveToHistory(finalPrompt, text, 'Gemini');
-                        })
-                        .catch(err => handleApiError(err, 'gemini-section', 'geminiKey'));
-                } else {
-                    // The UI already rendered an Auth Card for Gemini if the key was missing.
-                    // We don't need to do anything here, as the call won't be made.
-                    // If we wanted to support proxy as a fallback when no user key is present,
-                    // the logic would need to be adjusted to call `callAIProxy` here.
-                    // However, the current instruction implies we only proceed if a key (user or config) exists.
-                }
-            }
-
-            if ((!targetServices || targetServices.includes('openai'))) {
-                if (keys.openaiKey) {
-                    // Use chat interface for all prompts
-                    const conversationContext = conversationHistory.openai.length > 0 ? conversationHistory.openai : null;
-
-                    callOpenAI(keys.openaiKey, screenshotUrl, finalPrompt, conversationContext)
-                        .then(text => {
-                            // Add to conversation history
-                            conversationHistory.openai.push({ role: 'user', content: finalPrompt });
-                            conversationHistory.openai.push({ role: 'assistant', content: text });
-
-                            // Render as chat
-                            renderChatMessage('assistant', text, 'openai-section');
-
-                            // Setup chat interface
-                            setupChatInterface('openai-section', async (followUpMessage) => {
-                                conversationHistory.openai.push({ role: 'user', content: followUpMessage });
-                                renderChatMessage('user', followUpMessage, 'openai-section');
-                                renderChatMessage('assistant', '...', 'openai-section');
-
-                                try {
-                                    const response = await callOpenAI(keys.openaiKey, null, followUpMessage, conversationHistory.openai);
-
-                                    // Remove typing indicator
-                                    const chatContainer = document.querySelector('#openai-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
-
-                                    conversationHistory.openai.push({ role: 'assistant', content: response });
-                                    renderChatMessage('assistant', response, 'openai-section');
-                                    saveToHistory(followUpMessage, response, 'ChatGPT');
-                                } catch (err) {
-                                    const chatContainer = document.querySelector('#openai-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
-                                    renderChatMessage('assistant', `Error: ${err.message}`, 'openai-section');
-                                }
-                            });
-
-                            saveToHistory(finalPrompt, text, 'ChatGPT');
-                        })
-                        .catch(err => handleApiError(err, 'openai-section', 'openaiKey'));
-                }
-                // else: Auth Card already rendered
-            }
-
-            if ((!targetServices || targetServices.includes('anthropic'))) {
-                if (keys.anthropicKey) {
-                    // Use chat interface for all prompts
-                    const conversationContext = conversationHistory.anthropic.length > 0 ? conversationHistory.anthropic : null;
-
-                    callAnthropic(keys.anthropicKey, screenshotUrl, finalPrompt, conversationContext)
-                        .then(text => {
-                            // Add to conversation history
-                            conversationHistory.anthropic.push({ role: 'user', content: finalPrompt });
-                            conversationHistory.anthropic.push({ role: 'assistant', content: text });
-
-                            // Render as chat
-                            renderChatMessage('assistant', text, 'anthropic-section');
-
-                            // Setup chat interface
-                            setupChatInterface('anthropic-section', async (followUpMessage) => {
-                                conversationHistory.anthropic.push({ role: 'user', content: followUpMessage });
-                                renderChatMessage('user', followUpMessage, 'anthropic-section');
-                                renderChatMessage('assistant', '...', 'anthropic-section');
-
-                                try {
-                                    const response = await callAnthropic(keys.anthropicKey, null, followUpMessage, conversationHistory.anthropic);
-
-                                    // Remove typing indicator
-                                    const chatContainer = document.querySelector('#anthropic-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
-
-                                    conversationHistory.anthropic.push({ role: 'assistant', content: response });
-                                    renderChatMessage('assistant', response, 'anthropic-section');
-                                    saveToHistory(followUpMessage, response, 'Claude');
-                                } catch (err) {
-                                    const chatContainer = document.querySelector('#anthropic-section .chat-container');
-                                    const lastMessage = chatContainer.lastElementChild;
-                                    if (lastMessage && lastMessage.textContent.trim() === '...') lastMessage.remove();
-                                    renderChatMessage('assistant', `Error: ${err.message}`, 'anthropic-section');
-                                }
-                            });
-
-                            saveToHistory(finalPrompt, text, 'Claude');
-                        })
-                        .catch(err => handleApiError(err, 'anthropic-section', 'anthropicKey'));
-                }
-                // else: Auth Card already rendered
-            }
-
-            if ((!targetServices || targetServices.includes('grok'))) {
-                if (keys.grokKey) {
-                    callGrok(keys.grokKey, screenshotUrl, finalPrompt, conversationHistory.grok)
-                        .then(text => {
-                            renderChatMessage('assistant', text, 'grok-section');
-                            setupChatInterface('grok-section', async (followUpMessage) => {
-                                conversationHistory.grok.push({ role: 'user', content: followUpMessage });
-                                renderChatMessage('user', followUpMessage, 'grok-section');
-                                renderChatMessage('assistant', '...', 'grok-section', true); // Typing indicator
-
-                                try {
-                                    const response = await callGrok(keys.grokKey, screenshotUrl, followUpMessage, conversationHistory.grok);
-                                    removeTypingIndicator('grok-section');
-                                    renderChatMessage('assistant', response, 'grok-section');
-                                    conversationHistory.grok.push({ role: 'assistant', content: response });
-                                    saveToHistory(followUpMessage, response, 'Grok');
-                                } catch (err) {
-                                    removeTypingIndicator('grok-section');
-                                    renderChatMessage('assistant', formatErrorMessage(err.message, 'grok-section', 'grokKey'), 'grok-section');
-                                }
-                            });
-                            conversationHistory.grok.push({ role: 'assistant', content: text });
-                            saveToHistory(finalPrompt, text, 'Grok');
-                        })
-                        .catch(err => handleApiError(err, 'grok-section', 'grokKey'));
-                } else {
-                    // Auth Card already rendered by the initial check
-                }
-            }
-            if ((!targetServices || targetServices.includes('deepseek'))) {
-                if (keys.deepseekKey) {
-                    // Streaming implementation for DeepSeek
-                    callDeepSeek(keys.deepseekKey, screenshotUrl, finalPrompt, (partial) => {
-                        const { reasoning, content } = partial;
-
-                        // Preserve detail state if it exists
-                        const existingDetails = document.querySelector('#deepseek-section details');
-                        const wasOpen = existingDetails ? existingDetails.hasAttribute('open') : true; // Default to open while streaming
-
-                        const answerHtml = classFormatMarkdown(content);
-                        let finalHtml = answerHtml;
-
-                        if (reasoning) {
-                            const reasoningHtml = `
-                                <div class="reasoning-container">
-                                    <details ${wasOpen ? 'open' : ''}>
-                                        <summary>🦈 DeepSeek Thought Process</summary>
-                                        <div class="reasoning-content">${reasoning.replace(/\n/g, '<br>')}</div>
-                                    </details>
-                                </div>
-                            `;
-                            finalHtml = reasoningHtml + answerHtml;
-                        }
-
-                        updateSection('deepseek-section', finalHtml);
-                    })
-                        .then(finalResult => {
-                            if (!finalResult.content && !finalResult.reasoning) {
-                                updateSection('deepseek-section', 'No content returned.');
-                            } else {
-                                saveToHistory(finalPrompt, finalResult.content, 'DeepSeek');
-                            }
-                        })
-                        .catch(err => handleApiError(err, 'deepseek-section', 'deepseekKey'));
-                }
-                // else: Auth Card already rendered
-            }
-
-        } catch (err) {
-            console.error(err); // Log detailed error
-            let msg = err.message;
-            if (msg.includes("Cannot capture")) msg = "Could not capture page. Try reloading.";
-
-            // Show error in all active targets if they are still "Loading..."
-            if (!targetServices || targetServices.includes('gemini')) {
-                const el = document.querySelector('#gemini-section .content');
-                if (el && el.textContent === 'Loading...') updateSection('gemini-section', formatErrorMessage(msg));
-            }
-            if (!targetServices || targetServices.includes('deepseek')) {
-                const el = document.querySelector('#deepseek-section .content');
-                // For deepseek, if we already streamed something, maybe don't overwrite with error? 
-                // But if error is fatal, we should.
-                // But if error is fatal, we should.
-                updateSection('deepseek-section', formatErrorMessage(msg));
-            }
-        } finally {
-            // Auto-cleanup memory
-            screenshotUrl = null;
-            pageText = null;
-        }
-    };
-
-    function formatErrorMessage(rawMsg, sectionId = null, keyName = null) {
-        if (!rawMsg) return "Unknown Error";
-        const lower = rawMsg.toLowerCase();
-
-        const actionHtml = (sectionId && keyName) ? ` <a href="#" class="update-key-link" data-section="${sectionId}" data-key="${keyName}" style="color: var(--primary-color); font-weight: 600; text-decoration: underline; margin-left: 5px;">Update Key</a>` : "";
-
-        if (lower.includes("quota") || lower.includes("rate limit") || lower.includes("429")) {
-            return `⚠️ Quota Exceeded.${actionHtml} or check your API limits.`;
-        }
-        if (lower.includes("billing") || lower.includes("plan")) {
-            return `⚠️ Billing Issue.${actionHtml} or check your account.`;
-        }
-        if (lower.includes("key") || lower.includes("unauthorized") || lower.includes("401")) {
-            return `🔑 Invalid API Key.${actionHtml}.`;
-        }
-        if (lower.includes("capture") || lower.includes("permission")) {
-            return "📷 Screen Capture Failed. Try reloading the page.";
-        }
-        if (lower.includes("overloaded") || lower.includes("503")) {
-            return "⚠️ Service Overloaded. Please retry in a moment.";
-        }
-
-        // Truncate generic errors
-        return "Error: " + (rawMsg.length > 80 ? rawMsg.substring(0, 80) + "..." : rawMsg);
-    }
-
-    async function handleApiError(err, sectionId, keyName) {
-        const errorMsg = formatErrorMessage(err.message, sectionId, keyName);
-        const isQuota = errorMsg.includes("Quota Exceeded") || errorMsg.includes("429") || errorMsg.includes("402"); // 402 for payment needed
-
-        if (isQuota) {
-            console.warn(`[AutoRemove] Expired key detected for ${sectionId}. Removing ${keyName}...`);
-            debugToast(`Key Expired (Quota). Removing...`);
-
-            // Remove key from storage
-            await chrome.storage.local.remove(keyName);
-
-            // Immediately render Auth Card (Setup View)
-            const section = document.getElementById(sectionId);
-            if (section) {
-                renderAuthCard(section, sectionId, keyName, true);
-
-                // Optional: Force a small toast or message inside the card? 
-                // The debugToast is good enough for now.
-            }
-        } else {
-            // Standard Error Display
-            updateSection(sectionId, errorMsg);
-        }
-    }
-
-    async function scrapePageText() {
-        return new Promise((resolve) => {
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (!tabs || tabs.length === 0) return resolve("");
-                chrome.scripting.executeScript({
-                    target: { tabId: tabs[0].id },
-                    func: () => document.body.innerText
-                }, (results) => {
-                    if (chrome.runtime.lastError || !results || !results[0]) {
-                        resolve(""); // Fail silently or return empty text
-                    } else {
-                        resolve(results[0].result || "");
-                    }
-                });
-            });
-        });
-    }
 
     // Auto-Refresh Logic
     let debounceTimer;
     const triggerRefresh = () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            startExplanation();
+            // Check Preference before Auto-Explaining on Tab Switch/Navigation
+            chrome.storage.local.get(['autoSummarizeEnabled'], (result) => {
+                const isAutoSummarizeEnabled = result.autoSummarizeEnabled !== false; // default true
+                if (isAutoSummarizeEnabled) {
+                    startExplanation();
+                    debugToast("Auto-Summarize Triggered (Nav)");
+                } else {
+                    console.log("Auto-Summarize skipped (clean slate).");
+                    // Optional: Clear previous results or show "Ready" state?
+                    // For now, doing nothing is safer to avoid clearing user's manual work.
+                }
+            });
         }, 800);
     };
 
@@ -1481,7 +1615,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Determine visual direction
                     // If going to Next Index (index increases), content should Slide In from Right
                     // If going to Prev Index (index decreases), content should Slide In from Left
-                    const visualDirection = nextIndex > activeIndex ? 'left' : 'right';
                     // Note: 'left' means "Slide from Right to Left" effectively? 
                     // Let's map to my CSS classes:
                     // slide-in-right: transform(20px) -> 0. Comes FROM right. (For Next Tab)
@@ -1557,24 +1690,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupChatInterface(sectionId) {
+        // === Footer Chat Prompt ===
+        const mainChatInput = document.getElementById('main-chat-input');
+
+        // Handle Enter key for main chat input (if it exists)
+        if (mainChatInput) {
+            mainChatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const message = mainChatInput.value.trim();
+                    if (message) {
+                        // Determine which model to call based on active-section
+                        const activeSec = document.querySelector('.active-section');
+                        if (!activeSec) return;
+
+                        const service = activeSec.id.replace('-section', '');
+                        triggerFollowUpChat(service, message);
+                        mainChatInput.value = '';
+                    }
+                }
+            });
+        }
+
         const footer = document.getElementById('global-chat-footer');
         if (!footer) return;
 
         const input = footer.querySelector('.chat-input');
-        const sendBtn = footer.querySelector('.chat-send-btn:not(#chat-mic-btn)');
+        // Legacy send/clear buttons removed in v1.3
+        // Also removed redundant input cloning which was breaking the global listener.
+
+        // Voice Support (if mic exists)
+        let newMicBtn = null;
         const micBtn = footer.querySelector('#chat-mic-btn');
-        const clearBtn = footer.querySelector('.chat-clear-btn');
+        if (micBtn) {
+            // We can clone mic button to clear its listeners if needed, 
+            // but input should stay stable.
+            newMicBtn = micBtn.cloneNode(true);
+            micBtn.parentNode.replaceChild(newMicBtn, micBtn);
+        }
 
-        // Remove old listeners by cloning
-        const newSendBtn = sendBtn.cloneNode(true);
-        const newClearBtn = clearBtn.cloneNode(true);
-        const newInput = input.cloneNode(true);
-        const newMicBtn = micBtn ? micBtn.cloneNode(true) : null;
-
-        sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
-        clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
-        input.parentNode.replaceChild(newInput, input);
-        if (micBtn && newMicBtn) micBtn.parentNode.replaceChild(newMicBtn, micBtn);
 
         // Voice Support for Footer
         if (newMicBtn && 'webkitSpeechRecognition' in window) {
@@ -1598,7 +1752,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
-                newInput.value += (newInput.value ? " " : "") + transcript;
+                input.value += (input.value ? " " : "") + transcript;
                 newMicBtn.classList.remove('listening');
                 newMicBtn.style.color = '';
             };
@@ -1615,7 +1769,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const handleSend = () => {
-            const message = newInput.value.trim();
+            const message = input.value.trim();
             if (message) {
                 // Determine which model to call based on active-section
                 const activeSec = document.querySelector('.active-section');
@@ -1626,78 +1780,113 @@ document.addEventListener('DOMContentLoaded', () => {
                 // For simplicity, we trigger the specific send logic
                 // Instead of a callback, we just use a unified approach
                 triggerFollowUpChat(service, message);
-                newInput.value = '';
+                input.value = '';
             }
         };
 
-        newSendBtn.addEventListener('click', handleSend);
-        newInput.addEventListener('keydown', (e) => {
+        // newSendBtn listener removed (Button is gone)
+        input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
             }
         });
 
-        newClearBtn.addEventListener('click', () => {
-            const activeSec = document.querySelector('.active-section');
-            if (!activeSec) return;
-            const service = activeSec.id.replace('-section', '');
+        const clearBtn = footer.querySelector('.chat-clear-btn');
+        if (clearBtn) {
+            // Use existing button or clone if needed (cloning removes old listeners which is safer here)
+            const newClearBtn = clearBtn.cloneNode(true);
+            clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
 
-            if (conversationHistory[service]) {
-                conversationHistory[service] = [];
-            }
+            newClearBtn.addEventListener('click', () => {
+                const activeSec = document.querySelector('.active-section');
+                if (!activeSec) return;
+                const service = activeSec.id.replace('-section', '');
 
-            const contentDiv = activeSec.querySelector('.content');
-            contentDiv.innerHTML = `
-                <div class="empty-state">
-                    <div style="font-size: 2rem; margin-bottom: 10px;">💬</div>
-                    <p><strong>Conversation cleared!</strong></p>
-                    <p style="font-size: 0.9rem; opacity: 0.8;">Ready for a new question.</p>
-                </div>
-            `;
-        });
+                if (conversationHistory[service]) {
+                    conversationHistory[service] = [];
+                }
+
+                const contentDiv = activeSec.querySelector('.content');
+                if (contentDiv) {
+                    contentDiv.innerHTML = `
+                        <div class="empty-state">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">💬</div>
+                            <p><strong>Conversation cleared!</strong></p>
+                            <p style="font-size: 0.9rem; opacity: 0.8;">Ready for a new question.</p>
+                        </div>
+                    `;
+                }
+            });
+        }
     }
 
     async function triggerFollowUpChat(service, message) {
         // Find existing chat container or create one
         const sectionId = `${service}-section`;
         const section = document.getElementById(sectionId);
-        const contentDiv = section.querySelector('.content');
 
+        // Render user message immediately
         renderChatMessage('user', message, sectionId);
         renderChatMessage('assistant', '...', sectionId, true); // Typing indicator
 
-        try {
-            chrome.storage.local.get(null, async (keys) => {
+        // Capture Screenshot if toggle is active
+        let screenshotData = null;
+        if (typeof useScreenshot !== 'undefined' && useScreenshot) {
+            try {
+                screenshotData = await captureTab();
+                // Visual feedback to console
+                console.log("Screenshot attached to query.");
+            } catch (err) {
+                console.warn("Screenshot capture failed:", err);
+                renderChatMessage('assistant', `⚠️ Could not capture screenshot: ${err.message}`, sectionId);
+            }
+        }
+
+        chrome.storage.local.get(null, async (keys) => {
+            try {
                 let response = '';
                 if (service === 'gemini') {
-                    response = await callGemini(keys.geminiKey, null, message, conversationHistory.gemini);
+                    response = await callGemini(keys.geminiKey, screenshotData, message, conversationHistory.gemini);
                     conversationHistory.gemini.push({ role: 'user', content: message }, { role: 'assistant', content: response });
                 } else if (service === 'openai') {
-                    response = await callOpenAI(keys.openaiKey, null, message, conversationHistory.openai);
+                    response = await callOpenAI(keys.openaiKey, screenshotData, message, conversationHistory.openai);
                     conversationHistory.openai.push({ role: 'user', content: message }, { role: 'assistant', content: response });
                 } else if (service === 'anthropic') {
-                    response = await callAnthropic(keys.anthropicKey, null, message, conversationHistory.anthropic);
+                    response = await callAnthropic(keys.anthropicKey, screenshotData, message, conversationHistory.anthropic);
                     conversationHistory.anthropic.push({ role: 'user', content: message }, { role: 'assistant', content: response });
                 } else if (service === 'grok') {
-                    response = await callGrok(keys.grokKey, null, message, conversationHistory.grok);
+                    response = await callGrok(keys.grokKey, screenshotData, message, conversationHistory.grok);
                     conversationHistory.grok.push({ role: 'user', content: message }, { role: 'assistant', content: response });
                 } else if (service === 'deepseek') {
-                    // DeepSeek follow-up (simple non-streaming for now, or adapt streaming)
-                    // Let's just use the existing streaming function but it expects a callback
-                    // For brevity, we'll just show "Follow-up for DeepSeek integrated" or similar
-                    // Actually, let's just make it simple.
-                    response = "Follow-up for DeepSeek integrated!";
+                    // For DeepSeek chat, we might want to use the streaming call similar to startExplanation 
+                    // or just a simple call if we implemented a non-streaming version.
+                    // The previous code had a placeholder. Let's use callDeepSeek but just wait for the full result for simplicity in chat 
+                    // OR re-use the streaming logic if possible. 
+                    // Given the complexity of streaming in this unified function, let's just wait for the promise from our simplified callDeepSeek wrapper if it returns one.
+                    // But callDeepSeek returns a promise that resolves when streaming is done.
+                    // It calls the callback with partials.
+
+                    let finalContent = "";
+                    await callDeepSeek(keys.deepseekKey, null, message, (partial) => {
+                        // We could update a live message here if we had the UI set up for it.
+                        // For now, let's just accumulate.
+                        if (partial.content) finalContent += partial.content;
+                    });
+                    response = finalContent || "No response generated.";
+                    // Note: This matches the pattern even if suboptimal for streaming UX here.
+                    // A better refactor would be to make triggerFollowUpChat support streaming callbacks.
                 }
 
                 removeTypingIndicator(sectionId);
                 renderChatMessage('assistant', response, sectionId);
                 saveToHistory(message, response, service.toUpperCase());
-            });
-        } catch (err) {
-            removeTypingIndicator(sectionId);
-            renderChatMessage('assistant', formatErrorMessage(err.message, sectionId, modelKeyMap[sectionId]), sectionId);
-        }
+
+            } catch (err) {
+                removeTypingIndicator(sectionId);
+                handleApiError(err, sectionId, modelKeyMap[sectionId]);
+            }
+        });
     }
 
     function removeTypingIndicator(sectionId) {

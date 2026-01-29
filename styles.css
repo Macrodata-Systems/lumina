@@ -81,7 +81,6 @@ body {
 }
 
 /* --- Glassmorphism Controls Area --- */
-/* --- Glassmorphism Controls Area --- */
 .controls-wrapper {
   background: var(--bg-color);
   padding: var(--spacing);
@@ -89,6 +88,16 @@ body {
   z-index: 100;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
+  position: relative;
+}
+
+.top-right-controls {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 101;
 }
 
 #main-view {
@@ -99,22 +108,32 @@ body {
   overflow: hidden;
 }
 
-/* --- Super Prompt Bar --- */
-/* --- Super Prompt Bar --- */
-.super-prompt-bar {
+/* --- Action Bar (Clean Icon Row) --- */
+.action-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  /* Slightly tighter gap */
-  background: var(--surface-color);
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--section-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 4px 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-  transition: all 0.3s ease;
   margin-bottom: 12px;
-  flex-wrap: nowrap;
-  min-height: 42px;
+  justify-content: center;
+}
+
+.action-bar-bottom {
+  margin-bottom: 0;
+  margin-top: 0;
+  border-top: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+
+.action-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border-color);
 }
 
 .source-toggles {
@@ -192,11 +211,22 @@ body {
   color: var(--text-secondary);
   cursor: pointer;
   padding: 8px;
-  border-radius: 50%;
+  border-radius: 8px;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 1.1rem;
+  min-width: 38px;
+  min-height: 38px;
+  opacity: 0.7;
+}
+
+.icon-action-btn:hover {
+  opacity: 1;
+  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary-color);
+  transform: scale(1.05);
 }
 
 /* Hide config buttons completely as requested */
@@ -260,9 +290,13 @@ body {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding: 0;
   scrollbar-width: none;
-  /* Hide scrollbar */
+  -ms-overflow-style: none;
+  align-items: center;
+  justify-content: flex-start;
+  /* Changed from center to prevent cutting off left items */
+  /* Ensure first item isn't flush against edge */
 }
 
 .chips::-webkit-scrollbar {
@@ -281,6 +315,14 @@ body {
   white-space: nowrap;
   transition: all 0.2s ease;
 }
+
+.chips-footer {
+  padding: 8px 16px;
+  padding-bottom: 10px;
+  background: var(--bg-color);
+  border-top: 1px solid var(--border-color);
+}
+
 
 .chip:hover {
   border-color: var(--primary-color);
@@ -1069,12 +1111,15 @@ body {
 
 .chat-input {
   flex: 1;
-  padding: 10px 14px;
+  padding: 12px 16px;
+  /* Made larger */
   border: 1px solid var(--border-color);
-  border-radius: 20px;
+  border-radius: 24px;
+  /* Made larger */
   background: var(--section-bg);
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: 1rem;
+  /* Made larger */
   outline: none;
   transition: border-color 0.2s;
 }
@@ -1085,8 +1130,8 @@ body {
 
 .chat-send-btn,
 .chat-clear-btn {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border: none;
   border-radius: 50%;
   background: var(--primary-color);
@@ -1097,6 +1142,7 @@ body {
   justify-content: center;
   transition: all 0.2s;
   flex-shrink: 0;
+  font-size: 1.1rem;
 }
 
 #chat-mic-btn {
