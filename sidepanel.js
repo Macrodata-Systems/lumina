@@ -300,13 +300,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (pageText) {
                 finalPrompt += `\n\nContext from Page Text:\n${pageText.substring(0, 3000)}...`;
-                promptDisplay += `\n\n[Attached Page Text: ${pageText.length} chars (truncated in view)]`;
+                // Metadata hidden from user bubble per request
+                // promptDisplay += `\n\n[Attached Page Text: ${pageText.length} chars (truncated in view)]`;
             }
 
             if (screenshotUrl) {
-                promptDisplay += `\n[Attached Screenshot: Yes]`;
+                // Metadata hidden from user bubble per request
+                // promptDisplay += `\n[Attached Screenshot: Yes]`;
             } else {
-                promptDisplay += `\n[Attached Screenshot: No]`;
+                // Metadata hidden from user bubble per request
+                // promptDisplay += `\n[Attached Screenshot: No]`;
             }
 
             // Update Query View
@@ -329,18 +332,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Trigger explanations (Fire and forget, don't await completion to keep UI parallel)
             if ((!targetServices || targetServices.includes('gemini'))) {
-                if (keys.geminiKey) {
-                    // Always use chat interface for all prompts
+                if (keys.geminiKey || true) { // Always allow if key exists or for proxy
+                    // Update UI immediately with user message + screenshot
+                    renderChatMessage('user', promptDisplay, 'gemini-section', screenshotUrl);
+                    conversationHistory.gemini.push({ role: 'user', content: finalPrompt });
+
+                    const loadingId = `gemini-loading-${Date.now()}`;
+                    renderChatMessage('assistant', 'Loading...', 'gemini-section', null, loadingId);
+
                     const conversationContext = conversationHistory.gemini.length > 0 ? conversationHistory.gemini : null;
 
-                    const geminiCall = keys.geminiKey
-                        ? callGemini(keys.geminiKey, screenshotUrl, finalPrompt, conversationContext)
+                    const apiKey = keys.geminiKey;
+                    const geminiCall = apiKey
+                        ? callGemini(apiKey, screenshotUrl, finalPrompt, conversationContext)
                         : callAIProxy('gemini', finalPrompt, screenshotUrl);
 
                     geminiCall
                         .then(text => {
+                            // Clear loading 
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+
                             // Add to conversation history
-                            conversationHistory.gemini.push({ role: 'user', content: finalPrompt });
                             conversationHistory.gemini.push({ role: 'assistant', content: text });
 
                             // Render as chat
@@ -352,25 +365,34 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Save to history
                             saveToHistory(finalPrompt, text, 'Gemini');
                         })
-                        .catch(err => handleApiError(err, 'gemini-section', 'geminiKey'));
-                } else {
+                        .catch(err => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+                            handleApiError(err, 'gemini-section', 'geminiKey');
+                        });
+                }
+                else {
                     // The UI already rendered an Auth Card for Gemini if the key was missing.
-                    // We don't need to do anything here, as the call won't be made.
-                    // If we wanted to support proxy as a fallback when no user key is present,
-                    // the logic would need to be adjusted to call `callAIProxy` here.
-                    // However, the current instruction implies we only proceed if a key (user or config) exists.
                 }
             }
 
             if ((!targetServices || targetServices.includes('openai'))) {
                 if (keys.openaiKey) {
-                    // Use chat interface for all prompts
+                    // Update UI immediately
+                    renderChatMessage('user', promptDisplay, 'openai-section', screenshotUrl);
+                    conversationHistory.openai.push({ role: 'user', content: finalPrompt });
+
+                    const loadingId = `openai-loading-${Date.now()}`;
+                    renderChatMessage('assistant', 'Loading...', 'openai-section', null, loadingId);
+
                     const conversationContext = conversationHistory.openai.length > 0 ? conversationHistory.openai : null;
 
                     callOpenAI(keys.openaiKey, screenshotUrl, finalPrompt, conversationContext)
                         .then(text => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+
                             // Add to conversation history
-                            conversationHistory.openai.push({ role: 'user', content: finalPrompt });
                             conversationHistory.openai.push({ role: 'assistant', content: text });
 
                             // Render as chat
@@ -382,20 +404,31 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Save to history
                             saveToHistory(finalPrompt, text, 'ChatGPT');
                         })
-                        .catch(err => handleApiError(err, 'openai-section', 'openaiKey'));
+                        .catch(err => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+                            handleApiError(err, 'openai-section', 'openaiKey');
+                        });
                 }
-                // else: Auth Card already rendered
             }
 
             if ((!targetServices || targetServices.includes('anthropic'))) {
                 if (keys.anthropicKey) {
-                    // Use chat interface for all prompts
+                    // Update UI immediately
+                    renderChatMessage('user', promptDisplay, 'anthropic-section', screenshotUrl);
+                    conversationHistory.anthropic.push({ role: 'user', content: finalPrompt });
+
+                    const loadingId = `anthropic-loading-${Date.now()}`;
+                    renderChatMessage('assistant', 'Loading...', 'anthropic-section', null, loadingId);
+
                     const conversationContext = conversationHistory.anthropic.length > 0 ? conversationHistory.anthropic : null;
 
                     callAnthropic(keys.anthropicKey, screenshotUrl, finalPrompt, conversationContext)
                         .then(text => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+
                             // Add to conversation history
-                            conversationHistory.anthropic.push({ role: 'user', content: finalPrompt });
                             conversationHistory.anthropic.push({ role: 'assistant', content: text });
 
                             // Render as chat
@@ -407,17 +440,29 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Save to history
                             saveToHistory(finalPrompt, text, 'Claude');
                         })
-                        .catch(err => handleApiError(err, 'anthropic-section', 'anthropicKey'));
+                        .catch(err => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+                            handleApiError(err, 'anthropic-section', 'anthropicKey');
+                        });
                 }
-                // else: Auth Card already rendered
             }
 
             if ((!targetServices || targetServices.includes('grok'))) {
                 if (keys.grokKey) {
+                    // Update UI immediately
+                    renderChatMessage('user', promptDisplay, 'grok-section', screenshotUrl);
+                    conversationHistory.grok.push({ role: 'user', content: finalPrompt });
+
+                    const loadingId = `grok-loading-${Date.now()}`;
+                    renderChatMessage('assistant', 'Loading...', 'grok-section', null, loadingId);
+
                     callGrok(keys.grokKey, screenshotUrl, finalPrompt, conversationHistory.grok)
                         .then(text => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+
                             // Add to conversation history
-                            conversationHistory.grok.push({ role: 'user', content: finalPrompt });
                             conversationHistory.grok.push({ role: 'assistant', content: text });
 
                             // Render as chat
@@ -429,19 +474,29 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Save to history
                             saveToHistory(finalPrompt, text, 'Grok');
                         })
-                        .catch(err => handleApiError(err, 'grok-section', 'grokKey'));
-                } else {
-                    // Auth Card already rendered by the initial check
+                        .catch(err => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+                            handleApiError(err, 'grok-section', 'grokKey');
+                        });
                 }
             }
             if ((!targetServices || targetServices.includes('deepseek'))) {
                 if (keys.deepseekKey) {
+                    // Update UI immediately
+                    renderChatMessage('user', promptDisplay, 'deepseek-section', screenshotUrl);
+                    conversationHistory.deepseek.push({ role: 'user', content: finalPrompt });
+
+                    // Create a placeholder for the streaming response
+                    const streamingMsgId = `deepseek-streaming-${Date.now()}`;
+                    renderChatMessage('assistant', 'Loading...', 'deepseek-section', null, streamingMsgId);
+
                     // Streaming implementation for DeepSeek
                     callDeepSeek(keys.deepseekKey, screenshotUrl, finalPrompt, (partial) => {
                         const { reasoning, content } = partial;
 
                         // Preserve detail state if it exists
-                        const existingDetails = document.querySelector('#deepseek-section details');
+                        const existingDetails = document.getElementById(streamingMsgId)?.querySelector('details');
                         const wasOpen = existingDetails ? existingDetails.hasAttribute('open') : true; // Default to open while streaming
 
                         const answerHtml = classFormatMarkdown(content);
@@ -459,14 +514,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             finalHtml = reasoningHtml + answerHtml;
                         }
 
-                        updateSection('deepseek-section', finalHtml);
+                        // Update the existing streaming message instead of replacing entire section
+                        const msgBubble = document.getElementById(streamingMsgId)?.querySelector('.message-bubble');
+                        if (msgBubble) {
+                            msgBubble.innerHTML = finalHtml;
+                            // Auto-scroll
+                            msgBubble.scrollIntoView({ behavior: 'auto', block: 'end' });
+                        }
                     })
                         .then(finalResult => {
                             if (!finalResult.content && !finalResult.reasoning) {
-                                updateSection('deepseek-section', 'No content returned.');
+                                renderChatMessage('assistant', 'No content returned.', 'deepseek-section', null, streamingMsgId);
                             } else {
                                 // Add to conversation history (for follow-up chats)
-                                conversationHistory.deepseek.push({ role: 'user', content: finalPrompt });
                                 conversationHistory.deepseek.push({ role: 'assistant', content: finalResult.content });
 
                                 // Setup chat interface (follow-ups handled by triggerFollowUpChat)
@@ -478,9 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         })
                         .catch(err => handleApiError(err, 'deepseek-section', 'deepseekKey'));
                 }
-                // else: Auth Card already rendered
             }
-
         } catch (err) {
             console.error(err); // Log detailed error
             let msg = err.message;
@@ -489,25 +547,20 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show error in all active targets if they are still "Loading..."
             if (!targetServices || targetServices.includes('gemini')) {
                 const el = document.querySelector('#gemini-section .content');
-                if (el && el.textContent === 'Loading...') updateSection('gemini-section', formatErrorMessage(msg));
+                if (el && (el.textContent === 'Loading...' || el.innerHTML === 'Loading...')) updateSection('gemini-section', formatErrorMessage(msg));
             }
             if (!targetServices || targetServices.includes('deepseek')) {
                 const el = document.querySelector('#deepseek-section .content');
-                // For deepseek, if we already streamed something, maybe don't overwrite with error? 
-                // But if error is fatal, we should.
-                // But if error is fatal, we should.
-                updateSection('deepseek-section', formatErrorMessage(msg));
+                if (el && (el.textContent === 'Loading...' || el.innerHTML === 'Loading...')) updateSection('deepseek-section', formatErrorMessage(msg));
             }
         } finally {
             // Auto-cleanup memory
             screenshotUrl = null;
             pageText = null;
         }
-    };
+    }
 
 
-    // Handle messages from content script (when sidepanel is ALREADY open)
-    // Handle messages from content script (when sidepanel is ALREADY open)
     // Handle messages from content script (when sidepanel is ALREADY open)
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (message.action === 'explainText') {
@@ -1295,11 +1348,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (activeSec) {
                     const service = activeSec.id.replace('-section', '');
                     triggerFollowUpChat(service, query);
-                    // Clear input immediately or after brief delay? 
-                    // Immediately is snappier.
                     promptInput.value = '';
                 }
             }
+        });
+
+        // Auto-expand textarea
+        promptInput.addEventListener('input', () => {
+            promptInput.style.height = 'auto';
+            promptInput.style.height = (promptInput.scrollHeight) + 'px';
         });
     }
 
@@ -1444,7 +1501,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fix for object error (DeepSeek sometimes returns object)
         if (typeof msg === 'object') msg = JSON.stringify(msg);
 
-        updateSection(sectionId, formatErrorMessage(msg, sectionId, keyName));
+        const errorHtml = formatErrorMessage(msg, sectionId, keyName);
+
+        // If it's a chat context, render as message to preserve history. Otherwise, update the section.
+        const chatContainer = document.querySelector(`#${sectionId} .chat-container`);
+        if (chatContainer) {
+            renderChatMessage('assistant', errorHtml, sectionId, null, null, true);
+        } else {
+            updateSection(sectionId, errorHtml);
+        }
     }
 
     async function scrapePageText() {
@@ -1627,7 +1692,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Chat Interface Functions for Guided Learning ---
 
-    function renderChatMessage(role, content, sectionId) {
+    function renderChatMessage(role, content, sectionId, imageUrl = null, messageId = null, isHtml = false) {
         // GATEKEEPER: If UI is locked, DROP the message
         if (window.uiLocks && window.uiLocks[sectionId]) {
             console.warn(`[Gatekeeper] renderChatMessage BLOCKED for ${sectionId} because it is Locked (Updating Key).`);
@@ -1645,16 +1710,30 @@ document.addEventListener('DOMContentLoaded', () => {
             contentDiv.appendChild(chatContainer);
         }
 
-        // Create message div
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `chat-message ${role}-message`;
+        let messageDiv;
+        if (messageId) {
+            messageDiv = document.getElementById(messageId);
+        }
+
+        if (!messageDiv) {
+            messageDiv = document.createElement('div');
+            if (messageId) messageDiv.id = messageId;
+            messageDiv.className = `chat-message ${role}-message`;
+            chatContainer.appendChild(messageDiv);
+        }
+
+        let imageHtml = imageUrl ? `<img src="${imageUrl}" class="chat-screenshot" style="max-width: 100%; border-radius: 8px; margin-bottom: 8px; cursor: zoom-in; display: block;" onclick="window.open('${imageUrl}')">` : '';
+
+        // If it's the assistant, we might be formatting markdown. 
+        // If it's a typing indicator or intermediate state, we might not.
+        const formattedContent = (isHtml || content === '...' || content === '') ? content : classFormatMarkdown(content);
+
         messageDiv.innerHTML = `
             <div class="message-bubble">
-                ${classFormatMarkdown(content)}
+                ${imageHtml}
+                ${formattedContent}
             </div>
         `;
-
-        chatContainer.appendChild(messageDiv);
 
         // Auto-scroll to latest message (more reliable method)
         requestAnimationFrame(() => {
@@ -1662,108 +1741,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function setupChatInterface(sectionId) {
-        // === Footer Chat Prompt ===
-        const mainChatInput = document.getElementById('main-chat-input');
-
-        // Handle Enter key for main chat input (if it exists)
-        if (mainChatInput) {
-            mainChatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    const message = mainChatInput.value.trim();
-                    if (message) {
-                        // Determine which model to call based on active-section
-                        const activeSec = document.querySelector('.active-section');
-                        if (!activeSec) return;
-
-                        const service = activeSec.id.replace('-section', '');
-                        triggerFollowUpChat(service, message);
-                        mainChatInput.value = '';
-                    }
-                }
-            });
-        }
-
+    function setupChatInterface() {
         const footer = document.getElementById('global-chat-footer');
         if (!footer) return;
 
         const input = footer.querySelector('.chat-input');
+        if (!input) return;
+
         // Legacy send/clear buttons removed in v1.3
         // Also removed redundant input cloning which was breaking the global listener.
-
-        // Voice Support (if mic exists)
-        let newMicBtn = null;
-        const micBtn = footer.querySelector('#chat-mic-btn');
-        if (micBtn) {
-            // We can clone mic button to clear its listeners if needed, 
-            // but input should stay stable.
-            newMicBtn = micBtn.cloneNode(true);
-            micBtn.parentNode.replaceChild(newMicBtn, micBtn);
-        }
-
-
-        // Voice Support for Footer
-        if (newMicBtn && 'webkitSpeechRecognition' in window) {
-            const recognition = new webkitSpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-
-            newMicBtn.addEventListener('click', () => {
-                if (newMicBtn.classList.contains('listening')) {
-                    recognition.stop();
-                } else {
-                    try {
-                        recognition.start();
-                        newMicBtn.classList.add('listening');
-                        newMicBtn.style.color = '#ef4444'; // Red while listening
-                    } catch (e) {
-                        console.error("Speech Recognition Error:", e);
-                    }
-                }
-            });
-
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                input.value += (input.value ? " " : "") + transcript;
-                newMicBtn.classList.remove('listening');
-                newMicBtn.style.color = '';
-            };
-
-            recognition.onerror = () => {
-                newMicBtn.classList.remove('listening');
-                newMicBtn.style.color = '';
-            };
-
-            recognition.onend = () => {
-                newMicBtn.classList.remove('listening');
-                newMicBtn.style.color = '';
-            };
-        }
-
-        const handleSend = () => {
-            const message = input.value.trim();
-            if (message) {
-                // Determine which model to call based on active-section
-                const activeSec = document.querySelector('.active-section');
-                if (!activeSec) return;
-
-                const service = activeSec.id.replace('-section', '');
-
-                // For simplicity, we trigger the specific send logic
-                // Instead of a callback, we just use a unified approach
-                triggerFollowUpChat(service, message);
-                input.value = '';
-            }
-        };
-
-        // newSendBtn listener removed (Button is gone)
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-            }
-        });
 
         const clearBtn = footer.querySelector('.chat-clear-btn');
         if (clearBtn) {
@@ -1802,67 +1788,74 @@ document.addEventListener('DOMContentLoaded', () => {
         const sectionId = `${service}-section`;
         const section = document.getElementById(sectionId);
 
-        // Render user message immediately
-        renderChatMessage('user', message, sectionId);
-        renderChatMessage('assistant', '...', sectionId, true); // Typing indicator
-
-        // Capture Screenshot if toggle is active
+        // Capture Screenshot IF toggle is active (Do this BEFORE rendering so we can include it in the bubble if desired)
         let screenshotData = null;
         if (typeof useScreenshot !== 'undefined' && useScreenshot) {
             try {
                 screenshotData = await captureTab();
-                // Visual feedback to console
-                console.log("Screenshot attached to query.");
             } catch (err) {
-                console.warn("Screenshot capture failed:", err);
-                renderChatMessage('assistant', `⚠️ Could not capture screenshot: ${err.message}`, sectionId);
+                console.error("Screenshot capture failed for follow-up:", err);
             }
         }
 
-        chrome.storage.local.get(null, async (keys) => {
-            try {
-                let response = '';
-                if (service === 'gemini') {
-                    response = await callGemini(keys.geminiKey, screenshotData, message, conversationHistory.gemini);
-                    conversationHistory.gemini.push({ role: 'user', content: message }, { role: 'assistant', content: response });
-                } else if (service === 'openai') {
-                    response = await callOpenAI(keys.openaiKey, screenshotData, message, conversationHistory.openai);
-                    conversationHistory.openai.push({ role: 'user', content: message }, { role: 'assistant', content: response });
-                } else if (service === 'anthropic') {
-                    response = await callAnthropic(keys.anthropicKey, screenshotData, message, conversationHistory.anthropic);
-                    conversationHistory.anthropic.push({ role: 'user', content: message }, { role: 'assistant', content: response });
-                } else if (service === 'grok') {
-                    response = await callGrok(keys.grokKey, screenshotData, message, conversationHistory.grok);
-                    conversationHistory.grok.push({ role: 'user', content: message }, { role: 'assistant', content: response });
-                } else if (service === 'deepseek') {
-                    // For DeepSeek chat, we might want to use the streaming call similar to startExplanation 
-                    // or just a simple call if we implemented a non-streaming version.
-                    // The previous code had a placeholder. Let's use callDeepSeek but just wait for the full result for simplicity in chat 
-                    // OR re-use the streaming logic if possible. 
-                    // Given the complexity of streaming in this unified function, let's just wait for the promise from our simplified callDeepSeek wrapper if it returns one.
-                    // But callDeepSeek returns a promise that resolves when streaming is done.
-                    // It calls the callback with partials.
+        // Search for relevant context if it's the first follow-up and we don't have page text yet
+        // (Actually, startExplanation already keeps history, so follow-ups should use it.)
 
-                    let finalContent = "";
-                    await callDeepSeek(keys.deepseekKey, null, message, (partial) => {
-                        // We could update a live message here if we had the UI set up for it.
-                        // For now, let's just accumulate.
-                        if (partial.content) finalContent += partial.content;
-                    });
-                    response = finalContent || "No response generated.";
-                    // Note: This matches the pattern even if suboptimal for streaming UX here.
-                    // A better refactor would be to make triggerFollowUpChat support streaming callbacks.
-                }
+        // Render user message immediately (with screenshot support)
+        renderChatMessage('user', message, sectionId, screenshotData);
 
-                removeTypingIndicator(sectionId);
-                renderChatMessage('assistant', response, sectionId);
-                saveToHistory(message, response, service.toUpperCase());
+        const typingId = `${service}-typing-${Date.now()}`;
+        renderChatMessage('assistant', 'Loading...', sectionId, null, typingId);
 
-            } catch (err) {
-                removeTypingIndicator(sectionId);
-                handleApiError(err, sectionId, modelKeyMap[sectionId]);
+        try {
+            // Get Keys again (in case they changed)
+            const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey']);
+            const keys = {
+                geminiKey: storageKeys.geminiKey || API_CONFIG.geminiKey,
+                openaiKey: storageKeys.openaiKey || API_CONFIG.openaiKey,
+                anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
+                grokKey: storageKeys.grokKey || API_CONFIG.grokKey,
+                deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey
+            };
+
+            const keyName = modelKeyMap[sectionId];
+            const apiKey = keys[keyName];
+
+            // Add to conversation history
+            conversationHistory[service].push({ role: 'user', content: message });
+
+            let response = "";
+
+            if (service === 'gemini') {
+                response = await (apiKey ? callGemini(apiKey, screenshotData, message, conversationHistory.gemini) : callAIProxy('gemini', message, screenshotData));
+            } else if (service === 'openai') {
+                response = await callOpenAI(apiKey, screenshotData, message, conversationHistory.openai);
+            } else if (service === 'anthropic') {
+                response = await callAnthropic(apiKey, screenshotData, message, conversationHistory.anthropic);
+            } else if (service === 'grok') {
+                response = await callGrok(apiKey, screenshotData, message, conversationHistory.grok);
+            } else if (service === 'deepseek') {
+                // Simplified non-streaming for now in follow-up, match the pattern
+                let finalContent = "";
+                await callDeepSeek(apiKey, screenshotData, message, (partial) => {
+                    if (partial.content) finalContent += partial.content;
+                });
+                response = finalContent || "No response generated.";
             }
-        });
+
+            // Remove typing indicator 
+            const typingIndicator = document.getElementById(typingId);
+            if (typingIndicator) typingIndicator.remove();
+
+            renderChatMessage('assistant', response, sectionId);
+            conversationHistory[service].push({ role: 'assistant', content: response });
+            saveToHistory(message, response, service.toUpperCase());
+
+        } catch (err) {
+            const typingIndicator = document.getElementById(typingId);
+            if (typingIndicator) typingIndicator.remove();
+            handleApiError(err, sectionId, modelKeyMap[sectionId]);
+        }
     }
 
     function removeTypingIndicator(sectionId) {
@@ -1902,7 +1895,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (chrome.runtime.lastError) {
                         const errorMsg = chrome.runtime.lastError.message;
                         if (errorMsg.includes("permission") || errorMsg.includes("activeTab")) {
-                            // Still showing the friendly message, but appending the real one for clarity
                             reject(new Error(`Cannot capture page. Extension might need 'activeTab' permissions or a reload. (Details: ${errorMsg})`));
                         } else {
                             reject(chrome.runtime.lastError);
@@ -1914,9 +1906,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
     /* History & License Logic */
-
-
 
     function saveToHistory(prompt, response, service) {
         if (!prompt || !response) return;
@@ -1929,14 +1920,10 @@ document.addEventListener('DOMContentLoaded', () => {
             service: service
         };
 
-        // Add to local array
         window.historyData = [newItem, ...(window.historyData || [])];
-
-        // Limit to 50 items
         if (window.historyData.length > 50) {
             window.historyData = window.historyData.slice(0, 50);
         }
-
         chrome.storage.local.set({ history: window.historyData });
     }
 
@@ -1954,13 +1941,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         items.forEach(item => {
             const dateStr = new Date(item.date).toLocaleString();
-
-            // Clean up prompt for display
             let cleanPrompt = item.prompt.replace(/Instruction: /, "").replace(/Instruction: /, "");
-            // Remove "Context from Page Text" clutter if present at start
             if (cleanPrompt.startsWith("Context from")) cleanPrompt = "Page Context Analysis";
-
-            // Truncate length
             if (cleanPrompt.length > 60) cleanPrompt = cleanPrompt.substring(0, 60) + "...";
 
             const el = document.createElement('div');
@@ -1971,9 +1953,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="history-preview">${item.response.substring(0, 100)}...</div>
             `;
 
-            // Add click handler
             el.addEventListener('click', () => {
-                // Determine target section
                 let sectionId = item.service.toLowerCase() + '-section';
                 if (item.service === 'ChatGPT') sectionId = 'openai-section';
                 if (item.service === 'Claude') sectionId = 'anthropic-section';
@@ -1984,10 +1964,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 switchTab(sectionId);
                 updateSection(sectionId, classFormatMarkdown(item.response));
             });
-
             container.appendChild(el);
         });
-
     }
 
     document.getElementById('clear-history-btn').addEventListener('click', () => {
@@ -1998,7 +1976,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Delegated click for paste buttons
     document.addEventListener('click', async (e) => {
         if (e.target && e.target.classList.contains('paste-btn')) {
             try {
@@ -2008,7 +1985,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const input = document.getElementById(targetId);
                     if (input) {
                         input.value = text;
-                        // Visual feedback
                         const originalText = e.target.textContent;
                         e.target.textContent = 'Pasted!';
                         setTimeout(() => e.target.textContent = originalText, 1000);
@@ -2021,11 +1997,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
-
-    /**
-     * Call AI via Secure Backend Proxy (To hide developer keys)
-     */
     async function callAIProxy(service, prompt, imageUrl) {
         if (!API_CONFIG.licenseServerUrl || API_CONFIG.licenseServerUrl === "REPLACE_WITH_YOUR_DEPLOYED_WEB_APP_URL") {
             throw new Error('Backend Proxy not configured. Help the developer by setting LicenseServerUrl.');
