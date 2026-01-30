@@ -17,6 +17,8 @@ export const API_CONFIG = {
     anthropicKey: "",
     grokKey: "",
     deepseekKey: "",
+    openrouterKey: "",
+    groqKey: "",
 
     // Set to true to unlock technical settings (Gear icons, API tags)
     developerMode: false

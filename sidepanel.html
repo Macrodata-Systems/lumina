@@ -58,17 +58,24 @@
                     <button class="tab-btn active" data-tab="gemini-section" title="Gemini by Google">
                         ✨ Gemini <span class="model-badge free">Free</span>
                     </button>
+                    <button class="tab-btn" data-tab="openrouter-section" title="OpenRouter Aggregator"
+                        style="display: none">
+                        🌐 OpenRouter <span class="model-badge free">Free</span>
+                    </button>
+                    <button class="tab-btn" data-tab="groq-section" title="Groq Lightning Fast" style="display: none">
+                        ⚡ Groq <span class="model-badge free">Fast</span>
+                    </button>
                     <button class="tab-btn" data-tab="openai-section" title="ChatGPT by OpenAI">
                         🤖 ChatGPT <span class="model-badge">Reasoning</span>
                     </button>
                     <button class="tab-btn" data-tab="anthropic-section" title="Claude by Anthropic">
                         🧠 Claude <span class="model-badge">Writing</span>
                     </button>
-                    <button class="tab-btn" data-tab="grok-section" title="Grok by xAI">
+                    <button class="tab-btn" data-tab="grok-section" title="Grok by xAI" style="display: none">
                         🤘 Grok <span class="model-badge">News</span>
                     </button>
-                    <button class="tab-btn" data-tab="deepseek-section" title="DeepSeek AI">
-                        🦈 DeepSeek <span class="model-badge">Coding</span>
+                    <button class="tab-btn" data-tab="deepseek-section" title="DeepSeek AI" style="display: none">
+                        鲨 DeepSeek <span class="model-badge">Coding</span>
                     </button>
                     <button class="tab-btn" data-tab="history-section" title="View conversation history">📜
                         History</button>
@@ -87,6 +94,29 @@
                             <button class="refresh-btn" data-target="gemini" title="Refresh response"><i
                                     class="fa-solid fa-arrow-rotate-right"></i></button>
                             <button class="config-btn" data-target="gemini-key" title="Configure API key">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="content"></div>
+                </div>
+                <div class="result-section" id="openrouter-section">
+                    <div class="section-header">
+                        <h3>OpenRouter Response</h3>
+                        <div class="header-actions-small">
+                            <button class="refresh-btn" data-target="openrouter" title="Refresh response"><i
+                                    class="fa-solid fa-arrow-rotate-right"></i></button>
+                            <button class="config-btn" data-target="openrouter-key"
+                                title="Configure API key">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="content"></div>
+                </div>
+                <div class="result-section" id="groq-section">
+                    <div class="section-header">
+                        <h3>Groq Response</h3>
+                        <div class="header-actions-small">
+                            <button class="refresh-btn" data-target="groq" title="Refresh response"><i
+                                    class="fa-solid fa-arrow-rotate-right"></i></button>
+                            <button class="config-btn" data-target="groq-key" title="Configure API key">⚙️</button>
                         </div>
                     </div>
                     <div class="content"></div>
@@ -204,14 +234,25 @@
                 </div>
                 <input type="password" id="gemini-key" placeholder="Enter Gemini API Key">
             </div>
-
-
+            <div class="input-group">
+                <div class="label-row">
+                    <label for="openrouter-key">OpenRouter API Key</label>
+                    <button class="paste-btn" data-target="openrouter-key" title="Paste from clipboard">Paste
+                        Key</button>
+                </div>
+                <input type="password" id="openrouter-key" placeholder="Enter OpenRouter API Key">
+            </div>
+            <div class="input-group">
+                <div class="label-row">
+                    <label for="groq-key">Groq API Key</label>
+                    <button class="paste-btn" data-target="groq-key" title="Paste from clipboard">Paste Key</button>
+                </div>
+                <input type="password" id="groq-key" placeholder="Enter Groq API Key">
+            </div>
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
 
             <!-- Pro Settings (Hidden until unlocked) -->
             <div id="pro-model-settings" class="hidden">
-                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
-                <!-- <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 10px;">Pro Model Keys</h3> -->
-
                 <div class="input-group">
                     <div class="label-row">
                         <label for="openai-key">OpenAI API Key</label>
@@ -248,18 +289,17 @@
             <button id="save-settings-btn" class="secondary-btn" style="margin-top: 15px;"
                 title="Save all settings">Save</button>
             <button id="back-btn" class="text-btn" title="Return to main view">Back</button>
-
-            <div class="footer-info">
-                <p>&copy; 2026 Harsh Raj Singh. All Rights Reserved.</p>
-                <div class="footer-links">
-                    <a href="https://github.com/singhharsh199" target="_blank" title="About the Developer">About Me</a>
-                    •
-                    <a href="https://www.linkedin.com/in/singhharsh199/" target="_blank"
-                        title="Contact on LinkedIn">Contact
-                        Us</a>
-                </div>
-            </div>
         </div>
+
+        <div class="footer-info">
+            <p>&copy; All Rights Reserved. &bull;
+                <a href="https://github.com/singhharsh199" target="_blank" title="About the Developer">About Me</a>
+                &bull;
+                <a href="https://www.linkedin.com/in/singhharsh199/" target="_blank" title="Contact on LinkedIn">Contact
+                    Us</a>
+            </p>
+        </div>
+    </div>
     </div>
     <script type="module" src="sidepanel.js"></script>
 </body>

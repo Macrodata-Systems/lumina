@@ -321,6 +321,23 @@ body {
   padding-bottom: 10px;
   background: var(--bg-color);
   border-top: 1px solid var(--border-color);
+  justify-content: center;
+}
+
+.chips-footer .chips {
+  display: flex;
+  /* Ensure flex behavior */
+  justify-content: flex-start;
+  /* Align left to prevent left-side cutoff on overflow */
+  width: 100%;
+  overflow-x: auto;
+  /* Enable horizontal scrolling */
+  padding-bottom: 4px;
+  /* Space for scrollbar if needed */
+  -webkit-overflow-scrolling: touch;
+  /* Smooth scroll on iOS/Mac */
+  gap: 8px;
+  /* Consistent gap */
 }
 
 
@@ -1198,4 +1215,71 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* --- Settings View Buttons --- */
+.secondary-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--primary-gradient);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.secondary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+  opacity: 0.9;
+}
+
+.text-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 15px;
+  width: 100%;
+  padding: 8px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.text-btn:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+/* --- Footer Styles --- */
+.footer-info {
+  margin-top: auto;
+  padding: 15px 20px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.footer-info p {
+  margin: 0;
+  display: inline-block;
+}
+
+.footer-info a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: opacity 0.2s;
+  font-weight: 500;
+}
+
+.footer-info a:hover {
+  opacity: 0.8;
+  text-decoration: underline;
 }

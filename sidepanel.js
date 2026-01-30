@@ -11,6 +11,8 @@ import { callOpenAI } from './services/openai.js';
 import { callAnthropic } from './services/anthropic.js';
 import { callDeepSeek } from './services/deepseek.js';
 import { callGrok } from './services/xai.js';
+import { callOpenRouter } from './services/openrouter.js';
+import { callGroq } from './services/groq.js';
 // License import removed for lightweight build
 
 // --- AI Model Configuration ---
@@ -88,6 +90,34 @@ const AI_MODELS = {
             '<strong>Step 3:</strong> Click <strong>"Create API Key"</strong> and copy the generated key.',
             '<strong>Step 4:</strong> Paste it into the input field below to start talking.'
         ]
+    },
+    openrouter: {
+        displayName: 'OpenRouter',
+        providerName: 'OpenRouter',
+        iconClass: 'fa-solid fa-globe',
+        keyUrl: 'https://openrouter.ai/keys',
+        keyStorageName: 'openrouterKey',
+        sectionId: 'openrouter-section',
+        instructions: [
+            '<strong>Step 1:</strong> Click the button above to visit <strong>OpenRouter</strong>.',
+            '<strong>Step 2:</strong> Sign in and create a new <strong>API Key</strong>.',
+            '<strong>Step 3:</strong> Copy your key and paste it below.',
+            '<strong>Step 4:</strong> You can access models like Mistral, Llama, and more for free!'
+        ]
+    },
+    groq: {
+        displayName: 'Groq',
+        providerName: 'Groq',
+        iconClass: 'fa-solid fa-bolt-lightning',
+        keyUrl: 'https://console.groq.com/keys',
+        keyStorageName: 'groqKey',
+        sectionId: 'groq-section',
+        instructions: [
+            '<strong>Step 1:</strong> Click the button above to visit the <strong>Groq Console</strong>.',
+            '<strong>Step 2:</strong> Sign in and navigate to <strong>"API Keys"</strong>.',
+            '<strong>Step 3:</strong> Click <strong>"Create API Key"</strong> and copy it.',
+            '<strong>Step 4:</strong> Paste it below for lightning-fast inference!'
+        ]
     }
 };
 
@@ -97,7 +127,9 @@ const modelKeyMap = {
     'openai-section': 'openaiKey',
     'anthropic-section': 'anthropicKey',
     'grok-section': 'grokKey',
-    'deepseek-section': 'deepseekKey'
+    'deepseek-section': 'deepseekKey',
+    'openrouter-section': 'openrouterKey',
+    'groq-section': 'groqKey'
 };
 
 // --- SESSION EXPIRY MANAGEMENT ---
@@ -129,7 +161,9 @@ function clearExpiredSessionData() {
             openaiKey: allData.openaiKey || '',
             anthropicKey: allData.anthropicKey || '',
             grokKey: allData.grokKey || '',
-            deepseekKey: allData.deepseekKey || ''
+            deepseekKey: allData.deepseekKey || '',
+            openrouterKey: allData.openrouterKey || '',
+            groqKey: allData.groqKey || ''
         };
 
         // Clear ALL storage
@@ -163,7 +197,9 @@ const conversationHistory = {
     openai: [],
     anthropic: [],
     grok: [],
-    deepseek: []
+    deepseek: [],
+    openrouter: [],
+    groq: []
 };
 
 
@@ -223,6 +259,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (serviceName === 'gemini') targetServices = ['gemini'];
                 else if (serviceName === 'grok') targetServices = ['grok'];
                 else if (serviceName === 'deepseek') targetServices = ['deepseek'];
+                else if (serviceName === 'openrouter') targetServices = ['openrouter'];
+                else if (serviceName === 'groq') targetServices = ['groq'];
                 else targetServices = ['gemini']; // Fallback
             } else {
                 targetServices = ['gemini']; // Default fallback
@@ -237,7 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
             openaiKey: storageKeys.openaiKey || API_CONFIG.openaiKey,
             anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
             grokKey: storageKeys.grokKey || API_CONFIG.grokKey,
-            deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey
+            deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey,
+            openrouterKey: storageKeys.openrouterKey || API_CONFIG.openrouterKey,
+            groqKey: storageKeys.groqKey || API_CONFIG.groqKey
         };
 
         const resultsContainer = document.getElementById('results-container');
@@ -537,6 +577,56 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         })
                         .catch(err => handleApiError(err, 'deepseek-section', 'deepseekKey'));
+                }
+            }
+            if ((!targetServices || targetServices.includes('openrouter'))) {
+                if (keys.openrouterKey) {
+                    renderChatMessage('user', promptDisplay, 'openrouter-section', screenshotUrl);
+                    conversationHistory.openrouter.push({ role: 'user', content: finalPrompt });
+
+                    const loadingId = `openrouter-loading-${Date.now()}`;
+                    renderChatMessage('assistant', 'Loading...', 'openrouter-section', null, loadingId);
+
+                    callOpenRouter(keys.openrouterKey, screenshotUrl, finalPrompt, conversationHistory.openrouter)
+                        .then(text => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+
+                            conversationHistory.openrouter.push({ role: 'assistant', content: text });
+                            renderChatMessage('assistant', text, 'openrouter-section');
+                            setupChatInterface('openrouter-section');
+                            saveToHistory(finalPrompt, text, 'OpenRouter');
+                        })
+                        .catch(err => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+                            handleApiError(err, 'openrouter-section', 'openrouterKey');
+                        });
+                }
+            }
+            if ((!targetServices || targetServices.includes('groq'))) {
+                if (keys.groqKey) {
+                    renderChatMessage('user', promptDisplay, 'groq-section', screenshotUrl);
+                    conversationHistory.groq.push({ role: 'user', content: finalPrompt });
+
+                    const loadingId = `groq-loading-${Date.now()}`;
+                    renderChatMessage('assistant', 'Loading...', 'groq-section', null, loadingId);
+
+                    callGroq(keys.groqKey, screenshotUrl, finalPrompt, conversationHistory.groq)
+                        .then(text => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+
+                            conversationHistory.groq.push({ role: 'assistant', content: text });
+                            renderChatMessage('assistant', text, 'groq-section');
+                            setupChatInterface('groq-section');
+                            saveToHistory(finalPrompt, text, 'Groq');
+                        })
+                        .catch(err => {
+                            const loadingEl = document.getElementById(loadingId);
+                            if (loadingEl) loadingEl.remove();
+                            handleApiError(err, 'groq-section', 'groqKey');
+                        });
                 }
             }
         } catch (err) {
@@ -1473,15 +1563,19 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = `<div class="error-message">⚠️ ${displayMsg}</div>`;
 
         // If it's an API Key error, show a quick link to update it
-        if (isCritical || msg.toLowerCase().includes("api key") || msg.toLowerCase().includes("unauthorized") || msg.toLowerCase().includes("quota")) {
+        if (isCritical || msg.toLowerCase().includes("api key") || msg.toLowerCase().includes("unauthorized") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("user not found") || msg.toLowerCase().includes("no endpoints found")) {
             if (sectionId && keyName) {
                 const helperText = (msg === "Quota Exceeded" || msg.toLowerCase().includes("quota"))
                     ? "Your free tier quota is exhausted. Please wait or use a different key."
-                    : "Your API key appears to be invalid.";
+                    : (msg.toLowerCase().includes("user not found"))
+                        ? "OpenRouter Error: 'User not found'. This usually means your API key is invalid or missing."
+                        : (msg.toLowerCase().includes("no endpoints found"))
+                            ? "<b>OpenRouter Setting Required:</b> To use free models, go to <a href='https://openrouter.ai/settings/privacy' target='_blank' style='color: #ef4444; text-decoration: underline;'>OpenRouter Privacy Settings</a> and ENABLE 'Free endpoints that may train on inputs'."
+                            : "Your API key appears to be invalid.";
 
                 html += `
                     <div style="margin-top: 10px;">
-                         <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 8px;">
+                         <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 8px; line-height: 1.4;">
                             ${helperText}
                         </p>
                         <a href="#" class="update-key-link" data-section="${sectionId}" data-key="${keyName}" style="color: #ef4444; text-decoration: underline; font-size: 0.9rem;">
@@ -1809,13 +1903,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Get Keys again (in case they changed)
-            const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey']);
+            const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey', 'openrouterKey', 'groqKey']);
             const keys = {
                 geminiKey: storageKeys.geminiKey || API_CONFIG.geminiKey,
                 openaiKey: storageKeys.openaiKey || API_CONFIG.openaiKey,
                 anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
                 grokKey: storageKeys.grokKey || API_CONFIG.grokKey,
-                deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey
+                deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey,
+                openrouterKey: storageKeys.openrouterKey || API_CONFIG.openrouterKey,
+                groqKey: storageKeys.groqKey || API_CONFIG.groqKey
             };
 
             const keyName = modelKeyMap[sectionId];
@@ -1841,6 +1937,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (partial.content) finalContent += partial.content;
                 });
                 response = finalContent || "No response generated.";
+            } else if (service === 'openrouter') {
+                response = await callOpenRouter(apiKey, screenshotData, message, conversationHistory.openrouter);
+            } else if (service === 'groq') {
+                response = await callGroq(apiKey, screenshotData, message, conversationHistory.groq);
             }
 
             // Remove typing indicator 
