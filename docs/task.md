@@ -8,6 +8,7 @@
     - [x] Align suggestion chips to left to fix specific cutoff issues.
     - [x] Hide experimental tabs (OpenRouter, Grok, DeekSeek) for cleaner V1.3 launch.
     - [x] Ensure Gemini, ChatGPT, and Claude are prominent.
+    - [x] Replace "About Me" with "Feedback" section in footer.
 - [x] **Final Polish**
     - [x] Remove debug logs from `sidepanel.js`.
     - [x] Update `manifest.json` description.
