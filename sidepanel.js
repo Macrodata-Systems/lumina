@@ -978,7 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 2. Set flag for persistence AND wait for it
                 chrome.storage.local.set({ 'updating_key': sectionId }, () => {
-                    console.log(`[UpdateLink] updating_key set for ${sectionId}`);
+                    // console.log(`[UpdateLink] updating_key set for ${sectionId}`);
                     const modelId = Object.keys(AI_MODELS).find(k => AI_MODELS[k].keyStorageName === keyName);
                     if (modelId) {
                         // Clearing history and opening URL

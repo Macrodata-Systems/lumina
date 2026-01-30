@@ -2,7 +2,7 @@
 
 **Lightweight, Private, and Powerful.**
 
-Lumina allows you to explain anything on your screen using your favorite AI models (Gemini, ChatGPT, Claude, Grok, DeepSeek). It is designed to be extremely lightweight (<200KB) and privacy-focused, running entirely in your browser with no external tracking.
+Lumina allows you to explain anything on your screen using your favorite AI models (Gemini, ChatGPT, Claude). It is designed to be extremely lightweight (<200KB) and privacy-focused, running entirely in your browser with no external tracking.
 
 ![App Icon](assets/icon.png)
 
@@ -10,12 +10,10 @@ Lumina allows you to explain anything on your screen using your favorite AI mode
 
 -   **Universal Capture**: Works on potentially any website (including restricted ones like LinkedIn) thanks to enhanced permissions.
 -   **Always-On Intelligence**: Automatically re-analyzes the page when you **switch tabs** or **navigate** to a new URL (can be toggled off).
--   **Multi-Model Intelligence**: Get explanations from five leading AI models:
+-   **Multi-Model Intelligence**: Get explanations from three leading AI models:
     -   **Google Gemini 1.5 Flash** ⚡
     -   **OpenAI GPT-4o** 🧠
     -   **Anthropic Claude 3.5 Sonnet** 🎯
-    -   **xAI Grok** 🤘
-    -   **DeepSeek R1 (Reasoner)** 🦈
 -   **Super Prompt Bar**: A unified, pill-shaped input bar for all your interactions.
     -   **Voice Input (🎤)**: Speak your query directly using the Web Speech API.
     -   **Page Text Loading (📥)**: Instantly grab text from the page to use in your prompt.
@@ -24,7 +22,6 @@ Lumina allows you to explain anything on your screen using your favorite AI mode
     -   **Quick Prompt Chips**: Pre-configured prompts to get started quickly.
     -   **Scrollable Tabs**: Navigate easily between all AI models on any screen size.
     -   **Clean Interface**: Streamlined design with no clutter.
--   **Chain of Thought Display**: See the reasoning process behind DeepSeek's answers in a dedicated collapsible section.
 -   **Focused Configuration**: Click the ⚙️ icon next to any model to quickly configure just that specific provider.
 -   **Side-by-Side Comparison**: Compare how different AIs interpret the same content in a single view.
 -   **Secure**: Your API keys are stored locally in your browser (`chrome.storage.local`) and never sent to our servers.

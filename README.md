@@ -6,15 +6,14 @@
 
 **Lightweight. Private. Powerful.**
 
-Lumina is a Chrome extension that lets you explain anything on your screen using AI. Works with Gemini, ChatGPT, Claude, Grok, and DeepSeek - all from one unified interface.
+Lumina is a Chrome extension that lets you explain anything on your screen using AI. Works with Gemini, ChatGPT, and Claude - all from one unified interface.
 
 ## ✨ Key Features
 
 - 🌐 **Universal Capture** - Works on any website
-- 🤖 **5 AI Models** - Compare responses side-by-side
+- 🤖 **Multi-Model Support** - Switch between Gemini, ChatGPT, and Claude
 - 🎤 **Voice Input** - Speak your queries naturally  
 - 📸 **Smart Context** - Automatic screenshot & text extraction
-- 🦈 **Chain of Thought** - See how DeepSeek reasons
 - 🔒 **Privacy First** - All keys stored locally, no tracking
 
 ## 🚀 Quick Start

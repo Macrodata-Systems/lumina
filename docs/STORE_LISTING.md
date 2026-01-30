@@ -3,10 +3,10 @@
 Copy and paste these sections into your Developer Dashboard.
 
 ## Title
-`Lumina - AI Side Panel (Gemini, GPT-4, DeepSeek)`
+`Lumina - AI Side Panel (Gemini, ChatGPT, Claude)`
 
 ## Summary
-`Analyze any web page, video, or slide deck. Free Gemini integration. Unlock GPT-4o, Claude 3.5, and DeepSeek R1 with Pro.`
+`Analyze any web page, video, or slide deck. Free Gemini integration. Unlock GPT-4o and Claude 3.5 with your own keys.`
 
 ## Description
 
@@ -20,12 +20,12 @@ Instantly analyze the content of any tab—whether it’s a YouTube lecture, a P
 *   **Page Context**: Automatically reads the text of the page for context-aware answers.
 *   **Clean Interface**: A beautiful, distraction-free side panel that fits your workflow.
 
-### 🔓 Pro Features (Unlock the Power)
-Upgrade to **Lumina Pro** to access the world's smartest models and power-user features:
-*   **Premium Models**: Switch instantly between **OpenAI GPT-4o**, **Anthropic Claude 3.5 Sonnet**, and **DeepSeek R1**.
-*   **DeepSeek Chain of Thought**: Watch the AI "think" live with real-time reasoning steps (perfect for coding/math).
+### 🔓 Advanced Models (Bring Your Own Key)
+Unlock the world's smartest models with your own API keys:
+*   **Premium Models**: Switch instantly between **OpenAI GPT-4o** and **Anthropic Claude 3.5 Sonnet**.
 *   **Unlimited History**: Automatically save your best prompts and explanations to review later.
 *   **Voice Input**: Speak your queries naturally.
+*   **Smart Context**: Auto-scrapes page text for perfect answers every time.
 
 ### 🔒 Privacy First
 *   **Start Free**: Use your own API key for Gemini. Pay only for what you use, directly to Google (often free for low usage).
@@ -33,7 +33,7 @@ Upgrade to **Lumina Pro** to access the world's smartest models and power-user f
 
 ### ⚡ Perfect For...
 *   **Students**: Snapshot lecture slides and get instant summaries.
-*   **Developers**: Debug code snippets or get explanations for complex docs using DeepSeek R1.
+*   **Developers**: Debug code snippets or get explanations for complex docs.
 *   **Researchers**: Switch between Claude (best for writing) and GPT-4o (best for reasoning) in one click.
 
 ---
