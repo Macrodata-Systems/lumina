@@ -15,8 +15,6 @@ import { callOpenRouter } from './services/openrouter.js';
 import { callGroq } from './services/groq.js';
 // License import removed for lightweight build
 
-// --- AI Model Configuration ---
-// --- AI Model Configuration ---
 const AI_MODELS = {
     gemini: {
         displayName: 'Gemini',
@@ -340,33 +338,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (pageText) {
                 finalPrompt += `\n\nContext from Page Text:\n${pageText.substring(0, 3000)}...`;
-                // Metadata hidden from user bubble per request
-                // promptDisplay += `\n\n[Attached Page Text: ${pageText.length} chars (truncated in view)]`;
             }
 
-            if (screenshotUrl) {
-                // Metadata hidden from user bubble per request
-                // promptDisplay += `\n[Attached Screenshot: Yes]`;
-            } else {
-                // Metadata hidden from user bubble per request
-                // promptDisplay += `\n[Attached Screenshot: No]`;
-            }
-
-            // Update Query View
-
-
-            // Fetch keys using await (Promise-based in MV3)
-            // const storageKeys = await chrome.storage.local.get(['geminiKey', 'openaiKey', 'anthropicKey', 'grokKey', 'deepseekKey']);
-
-            // Merge storage keys with hardcoded config keys (Storage takes precedence if user set one, otherwise Config)
-            // OR user might want Config to override? Usually Hardcode = Default.
-            // Let's allow Storage to override so the user can still change it in UI if they want, 
-            // but default to Config if Storage is empty.
-            // const keys = {
-            //     geminiKey: storageKeys.geminiKey || API_CONFIG.geminiKey,
-            //     openaiKey: storageKeys.openaiKey || API_CONFIG.openaiKey,
-            //     anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
-            //     grokKey: storageKeys.grokKey || API_CONFIG.grokKey,
+            // Append Dynamic Chips Instruction
+            finalPrompt += `\n\nAlso provide 3 short, relevant follow-up questions for the user to ask next based on this content. Format them as a JSON list at the very end of the response, strictly enclosed in :::JSON[...]:::. Example: :::JSON["Question 1", "Question 2", "Question 3"]:::`;
             //     deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey
             // };
 
@@ -377,35 +352,61 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderChatMessage('user', promptDisplay, 'gemini-section', screenshotUrl);
                     conversationHistory.gemini.push({ role: 'user', content: finalPrompt });
 
+                    // Animation START
+                    const inputContainer = document.querySelector('.chat-input-container');
+                    if (inputContainer) inputContainer.classList.add('processing');
+
                     const loadingId = `gemini-loading-${Date.now()}`;
                     renderChatMessage('assistant', 'Loading...', 'gemini-section', null, loadingId);
 
                     const conversationContext = conversationHistory.gemini.length > 0 ? conversationHistory.gemini : null;
 
                     const apiKey = keys.geminiKey;
-                    const geminiCall = apiKey
-                        ? callGemini(apiKey, screenshotUrl, finalPrompt, conversationContext)
-                        : callAIProxy('gemini', finalPrompt, screenshotUrl);
+                    if (!apiKey) {
+                        // Remove loading and show key requirement
+                        const loadingEl = document.getElementById(loadingId);
+                        if (loadingEl) loadingEl.remove();
+                        if (inputContainer) inputContainer.classList.remove('processing');
+
+                        // Show inline auth card for key input
+                        const geminiSection = document.getElementById('gemini-section');
+                        if (geminiSection) {
+                            renderAuthCard(geminiSection, 'gemini-section', 'geminiKey', true);
+                        }
+                        return;
+                    }
+
+                    const geminiCall = callGemini(apiKey, screenshotUrl, finalPrompt, conversationContext);
 
                     geminiCall
                         .then(text => {
+                            // Animation STOP
+                            if (inputContainer) inputContainer.classList.remove('processing');
+
                             // Clear loading 
                             const loadingEl = document.getElementById(loadingId);
                             if (loadingEl) loadingEl.remove();
 
+                            // Dynamic Chips Parsing
+                            const { cleanText, suggestions } = extractFollowUps(text);
+                            updateChips(suggestions);
+
                             // Add to conversation history
-                            conversationHistory.gemini.push({ role: 'assistant', content: text });
+                            conversationHistory.gemini.push({ role: 'assistant', content: cleanText });
 
                             // Render as chat
-                            renderChatMessage('assistant', text, 'gemini-section');
+                            renderChatMessage('assistant', cleanText, 'gemini-section');
 
                             // Setup chat interface (follow-ups handled by triggerFollowUpChat)
                             setupChatInterface('gemini-section');
 
                             // Save to history
-                            saveToHistory(finalPrompt, text, 'Gemini');
+                            saveToHistory(finalPrompt, cleanText, 'Gemini');
                         })
                         .catch(err => {
+                            // Animation STOP
+                            if (inputContainer) inputContainer.classList.remove('processing');
+
                             const loadingEl = document.getElementById(loadingId);
                             if (loadingEl) loadingEl.remove();
                             handleApiError(err, 'gemini-section', 'geminiKey');
@@ -756,6 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function attemptEntry() {
             // Unconditional Entry (User request: Don't ask for keys at start)
             setupView.classList.add('hidden');
+            onboardingView.classList.add('hidden'); // Hide onboarding view too
             mainView.classList.remove('hidden');
 
             // Ensure results container is visible for Auth Card / Ready state
@@ -793,13 +795,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     // PARANOID CHECK: Re-read storage to ensure no update started
                     chrome.storage.local.get(['updating_key', 'autoSummarizeEnabled'], (latest) => {
                         const isAutoSummarizeEnabled = latest.autoSummarizeEnabled !== false;
-                        if (!latest.updating_key && isAutoSummarizeEnabled) {
+
+                        // Check if we're still on onboarding/setup screens
+                        const isOnOnboardingScreen = !onboardingView.classList.contains('hidden');
+                        const isOnSetupScreen = !setupView.classList.contains('hidden');
+
+                        if (!latest.updating_key && isAutoSummarizeEnabled && !isOnOnboardingScreen && !isOnSetupScreen) {
                             debugToast('Auto-Summarize Triggered');
                             // Directly trigger explanation instead of clicking chip
                             startExplanation();
                         } else {
                             if (latest.updating_key) {
                                 debugToast(`Auto-Summarize BLOCKED by Update Lock: ${latest.updating_key}`);
+                            } else if (isOnOnboardingScreen || isOnSetupScreen) {
+                                debugToast('Auto-Summarize BLOCKED: On welcome/setup screen');
                             } else {
                                 debugToast('Auto-Summarize is OFF');
                             }
@@ -812,7 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 1. Auto-redirect after 3 seconds
+        // Auto-redirect after 3 seconds to Gemini tab
         setTimeout(() => {
             attemptEntry();
         }, 3000);
@@ -1615,8 +1624,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 const activeTab = tabs[0];
 
-                // IGNORE: chrome://, edge://, about:blank, etc.
-                if (activeTab.url && (activeTab.url.startsWith('chrome://') || activeTab.url.startsWith('edge://') || activeTab.url.startsWith('about:') || activeTab.url.startsWith('chrome-extension://'))) {
+                // IGNORE: restricted pages where scripting is not allowed
+                const restrictedPrefixes = [
+                    'chrome://',
+                    'edge://',
+                    'about:',
+                    'view-source:',
+                    'chrome-extension://',
+                    'https://chrome.google.com/webstore',
+                    'https://chromewebstore.google.com'
+                ];
+
+                if (!activeTab.url || restrictedPrefixes.some(p => activeTab.url.startsWith(p))) {
+                    console.log(`[Lumina] Skipping text scrape for restricted URL: ${activeTab.url}`);
                     resolve('');
                     return;
                 }
@@ -1624,13 +1644,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 chrome.scripting.executeScript({
                     target: { tabId: activeTab.id },
                     func: () => {
-                        // Better text extraction using Readability logic (simplified)
-                        // Or just document.body.innerText for now
                         return document.body.innerText;
                     }
                 }, (results) => {
-                    if (chrome.runtime.lastError || !results || !results[0]) {
-                        console.warn("Scripting error or restricted page:", chrome.runtime.lastError);
+                    if (chrome.runtime.lastError) {
+                        // Just log message cleanly, don't warn loudly if it's expected
+                        const msg = chrome.runtime.lastError.message;
+                        console.log(`[Lumina] Scripting skipped/failed: ${msg}`);
+                        resolve('');
+                    } else if (!results || !results[0]) {
                         resolve('');
                     } else {
                         resolve(results[0].result || '');
@@ -1822,16 +1844,137 @@ document.addEventListener('DOMContentLoaded', () => {
         // If it's a typing indicator or intermediate state, we might not.
         const formattedContent = (isHtml || content === '...' || content === '') ? content : classFormatMarkdown(content);
 
-        messageDiv.innerHTML = `
-            <div class="message-bubble">
-                ${imageHtml}
-                ${formattedContent}
-            </div>
-        `;
+        if (imageHtml) {
+            messageDiv.innerHTML = `
+                <div class="message-bubble">
+                    ${imageHtml}
+                    ${formattedContent}
+                </div>
+            `;
+        } else {
+            // Inject Copy Button for Text Messages
+            messageDiv.innerHTML = `
+                <div class="message-bubble">
+                    <button class="copy-message-btn" title="Copy text"><i class="fa-regular fa-copy"></i></button>
+                    ${formattedContent}
+                </div>
+            `;
+
+            // Add Listener
+            const copyBtn = messageDiv.querySelector('.copy-message-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    const textToCopy = content.replace(/<[^>]*>/g, ''); // Simple strip HTML
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const icon = copyBtn.querySelector('i');
+                        icon.className = 'fa-solid fa-check';
+                        setTimeout(() => {
+                            icon.className = 'fa-regular fa-copy';
+                        }, 2000);
+                    });
+                });
+            }
+        }
 
         // Auto-scroll to latest message (more reliable method)
         requestAnimationFrame(() => {
             messageDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        });
+    }
+
+    // --- Dynamic Chips Logic ---
+    function extractFollowUps(text) {
+        if (!text) return { cleanText: '', suggestions: [] };
+
+        // Robust Regex to find the JSON block: :::JSON ... :::
+        // Capture everything between tags, case insensitive
+        const jsonRegex = /:::JSON([\s\S]*?):::/i;
+        const match = text.match(jsonRegex);
+
+        if (match && match[1]) {
+            try {
+                let jsonStr = match[1].trim();
+
+                // Heuristic: If it doesn't look like an array, try wrapping it?
+                // But usually prompt adherence is decent. We assume it's valid JSON content if parsed.
+                // If the model returned just items "A", "B", "C" without brackets, this fails.
+                // We'll try parsing as-is first.
+                let suggestions = [];
+                try {
+                    suggestions = JSON.parse(jsonStr);
+                } catch (e1) {
+                    // Fallback: Try wrapping in brackets if not present
+                    if (!jsonStr.startsWith('[')) {
+                        suggestions = JSON.parse(`[${jsonStr}]`);
+                    } else {
+                        throw e1;
+                    }
+                }
+
+                // Remove the block from the text
+                const cleanText = text.replace(match[0], '').trim();
+
+                return { cleanText, suggestions };
+            } catch (e) {
+                console.warn("Failed to parse follow-up JSON:", e);
+                // Even if parsing fails, we might want to try to remove the generic block? 
+                // No, better to leave it so user sees the error/debug info if needed.
+            }
+        }
+
+        // Fallback: No JSON found
+        return { cleanText: text, suggestions: [] };
+    }
+
+    function updateChips(suggestions) {
+        if (!suggestions || suggestions.length === 0) return;
+
+        // Find all chips containers in footer (there are two in HTML, usually hidden/visible logic applies)
+        // We target .chips-footer .chips specifically
+        const chipsContainers = document.querySelectorAll('.chips-footer .chips');
+
+        chipsContainers.forEach(container => {
+            // Keep the static action chips (like screenshot toggle) if they are in the same container? 
+            // Actually, the footer has two .chips-container divs. 
+            // 1. Controls/Actions (Camera, Mic, Theme)
+            // 2. Prompt Chips (Summarize, Explain, etc.)
+
+            // We want to replace the PROMPT CHIPS (second one usually)
+            // Let's identify by content. If it has data-prompt, it's a prompt chip.
+
+            const hasPrompts = container.querySelector('[data-prompt]');
+            if (hasPrompts || container.children.length === 0) {
+                // Clear existing prompt chips
+                container.innerHTML = '';
+
+                suggestions.forEach(s => {
+                    const btn = document.createElement('button');
+                    btn.className = 'chip';
+                    btn.setAttribute('data-prompt', s);
+                    btn.title = s;
+                    btn.textContent = s.length > 20 ? s.substring(0, 20) + '...' : s;
+
+                    // Add click listener (delegated one might miss dynamically added elements if not attached to parent)
+                    // The global listener uses chips.forEach which runs ONCE at startup.
+                    // We need to attach listeners here OR use a delegated listener on BODY (safer).
+                    // Ideally, we attach here.
+
+                    btn.addEventListener('click', () => {
+                        const promptInput = document.getElementById('main-chat-input');
+                        if (promptInput) {
+                            promptInput.value = s;
+                            const activeSec = document.querySelector('.active-section');
+                            if (activeSec) {
+                                const service = activeSec.id.replace('-section', '');
+                                triggerFollowUpChat(service, s);
+                                setTimeout(() => promptInput.value = '', 100);
+                            }
+                        }
+                    });
+
+                    container.appendChild(btn);
+                });
+            }
         });
     }
 
@@ -1910,38 +2053,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 anthropicKey: storageKeys.anthropicKey || API_CONFIG.anthropicKey,
                 grokKey: storageKeys.grokKey || API_CONFIG.grokKey,
                 deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey,
+                deepseekKey: storageKeys.deepseekKey || API_CONFIG.deepseekKey,
                 openrouterKey: storageKeys.openrouterKey || API_CONFIG.openrouterKey,
                 groqKey: storageKeys.groqKey || API_CONFIG.groqKey
             };
 
+            // Animation START
+            const inputContainer = document.querySelector('.chat-input-container');
+            if (inputContainer) inputContainer.classList.add('processing');
+
             const keyName = modelKeyMap[sectionId];
             const apiKey = keys[keyName];
 
+            // Add instruction for chips
+            const augmentedMessage = message + `\n\nAlso provide 3 short, relevant follow-up questions for the user to ask next. Format them as a JSON list at the very end of the response, enclosed in :::JSON[...]:::.`;
+
             // Add to conversation history
-            conversationHistory[service].push({ role: 'user', content: message });
+            conversationHistory[service].push({ role: 'user', content: augmentedMessage });
 
             let response = "";
 
             if (service === 'gemini') {
-                response = await (apiKey ? callGemini(apiKey, screenshotData, message, conversationHistory.gemini) : callAIProxy('gemini', message, screenshotData));
+                if (!apiKey) {
+                    throw new Error('⚠️ No Gemini API key configured. Please add your API key in Settings.');
+                }
+                response = await callGemini(apiKey, screenshotData, augmentedMessage, conversationHistory.gemini);
             } else if (service === 'openai') {
-                response = await callOpenAI(apiKey, screenshotData, message, conversationHistory.openai);
+                response = await callOpenAI(apiKey, screenshotData, augmentedMessage, conversationHistory.openai);
             } else if (service === 'anthropic') {
-                response = await callAnthropic(apiKey, screenshotData, message, conversationHistory.anthropic);
+                response = await callAnthropic(apiKey, screenshotData, augmentedMessage, conversationHistory.anthropic);
             } else if (service === 'grok') {
-                response = await callGrok(apiKey, screenshotData, message, conversationHistory.grok);
+                response = await callGrok(apiKey, screenshotData, augmentedMessage, conversationHistory.grok);
             } else if (service === 'deepseek') {
                 // Simplified non-streaming for now in follow-up, match the pattern
                 let finalContent = "";
-                await callDeepSeek(apiKey, screenshotData, message, (partial) => {
+                await callDeepSeek(apiKey, screenshotData, augmentedMessage, (partial) => {
                     if (partial.content) finalContent += partial.content;
                 });
                 response = finalContent || "No response generated.";
             } else if (service === 'openrouter') {
-                response = await callOpenRouter(apiKey, screenshotData, message, conversationHistory.openrouter);
+                response = await callOpenRouter(apiKey, screenshotData, augmentedMessage, conversationHistory.openrouter);
             } else if (service === 'groq') {
-                response = await callGroq(apiKey, screenshotData, message, conversationHistory.groq);
+                response = await callGroq(apiKey, screenshotData, augmentedMessage, conversationHistory.groq);
             }
+
+            // Animation STOP
+            if (inputContainer) inputContainer.classList.remove('processing');
+
+            // Dynamic Chips Parsing
+            const { cleanText, suggestions } = extractFollowUps(response);
+            updateChips(suggestions);
+            response = cleanText; // Update response to clean version
 
             // Remove typing indicator 
             const typingIndicator = document.getElementById(typingId);
@@ -1952,6 +2114,10 @@ document.addEventListener('DOMContentLoaded', () => {
             saveToHistory(message, response, service.toUpperCase());
 
         } catch (err) {
+            // Animation STOP
+            const inputContainer = document.querySelector('.chat-input-container');
+            if (inputContainer) inputContainer.classList.remove('processing');
+
             const typingIndicator = document.getElementById(typingId);
             if (typingIndicator) typingIndicator.remove();
             handleApiError(err, sectionId, modelKeyMap[sectionId]);

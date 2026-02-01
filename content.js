@@ -3,7 +3,7 @@
 // Create Bubble Element (Direct Injection, No Shadow DOM to avoid complexity)
 const bubble = document.createElement('div');
 bubble.id = 'lumina-bubble-overlay';
-bubble.textContent = '✨ Explain with Lumina'; // CORRECTED TEXT
+bubble.textContent = '💎 Explain with Lumina'; // CORRECTED TEXT
 // Use inline styles with !important to force visibility
 bubble.style.cssText = `
     position: absolute !important;
@@ -105,7 +105,7 @@ bubble.addEventListener('click', (e) => {
             alert('Lumina Extension Updated: Please reload this page for changes to take effect.');
 
             setTimeout(() => {
-                bubble.textContent = '✨ Explain with Lumina';
+                bubble.textContent = '💎 Explain with Lumina';
                 bubble.style.backgroundColor = '';
                 bubble.style.color = '';
             }, 5000);
@@ -114,13 +114,13 @@ bubble.addEventListener('click', (e) => {
         console.error('Lumina: Extension context invalidated. Please reload the page.');
         bubble.textContent = '⚠️ Reload page';
         setTimeout(() => {
-            bubble.textContent = '✨ Explain with Lumina';
+            bubble.textContent = '💎 Explain with Lumina';
         }, 2000);
     }
 
     // Reset after delay
     setTimeout(() => {
         bubble.style.display = 'none';
-        bubble.textContent = '✨ Explain with Lumina'; // CORRECTED TEXT
+        bubble.textContent = '💎 Explain with Lumina'; // CORRECTED TEXT
     }, 1000);
 });

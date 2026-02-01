@@ -18,6 +18,8 @@
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --border-color: #e2e8f0;
+  --section-bg: #ffffff;
+  /* Light mode prompt background */
 
   /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.85);
@@ -57,6 +59,8 @@
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
   --border-color: rgba(255, 255, 255, 0.1);
+  --section-bg: rgba(24, 24, 27, 0.8);
+  /* Dark mode prompt background */
 }
 
 body {
@@ -85,10 +89,23 @@ body {
   background: var(--bg-color);
   padding: var(--spacing);
   padding-bottom: 12px;
-  z-index: 100;
+  z-index: 10002;
+  /* Boost above global glow (9999) for crisp UI */
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
   position: relative;
+}
+
+/* Hide controls on onboarding/setup screens */
+#onboarding-view:not(.hidden)~#main-view .controls-wrapper,
+#setup-view:not(.hidden)~#main-view .controls-wrapper,
+#onboarding-view:not(.hidden)~#main-view .chips-footer,
+#setup-view:not(.hidden)~#main-view .chips-footer,
+#onboarding-view:not(.hidden)~#main-view #global-chat-footer,
+#setup-view:not(.hidden)~#main-view #global-chat-footer,
+#onboarding-view:not(.hidden)~#main-view #results-container,
+#setup-view:not(.hidden)~#main-view #results-container {
+  display: none;
 }
 
 .top-right-controls {
@@ -329,7 +346,10 @@ body {
   /* Ensure flex behavior */
   justify-content: flex-start;
   /* Align left to prevent left-side cutoff on overflow */
-  width: 100%;
+  width: fit-content;
+  /* Allow centering by parent when not overflowing */
+  max-width: 100%;
+  /* Cap at parent width to force usage of overflow */
   overflow-x: auto;
   /* Enable horizontal scrolling */
   padding-bottom: 4px;
@@ -368,6 +388,8 @@ body {
   /* Small padding for first item */
   padding-right: 4px;
   /* Small padding for last item */
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
 }
 
 .tabs::-webkit-scrollbar {
@@ -400,6 +422,9 @@ body {
   transition: all 0.2s;
   border-radius: var(--radius-pill);
   /* Make tabs pills */
+  flex-shrink: 0;
+  /* CRITICAL: Prevent shrinking so scroll triggers */
+  white-space: nowrap;
 }
 
 .tab-btn:hover {
@@ -683,7 +708,8 @@ body {
 }
 
 /* --- Setup / Onboarding View --- */
-#setup-view {
+#setup-view,
+#onboarding-view {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1101,15 +1127,109 @@ body {
   flex-direction: column;
 }
 
+/* --- Global Extension Glow --- */
+body {
+  margin: 0;
+  height: 100vh;
+  /* Restore theme background image integration */
+  background-color: var(--bg-color);
+  background-image: var(--bg-image, none);
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  /* Ensure body doesn't scroll, inner containers do */
+  border-radius: 16px;
+  /* Sync radius with border and glow */
+}
+
+/* Inner Glow for the Extension Body */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  /* Just behind the border (9999) */
+  pointer-events: none;
+  /* Balanced layered glow: Visible but not overwhelming */
+  box-shadow:
+    inset 0 0 80px rgba(139, 92, 246, 0.25),
+    /* Reduced ambient (0.4 -> 0.25) */
+    inset 0 0 20px rgba(217, 70, 239, 0.2);
+  /* Reduced highlight (0.3 -> 0.2) */
+  border-radius: 16px;
+  /* Sync radius */
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  /* Fixed ensures it stays relative to the viewport/window frame */
+  inset: 0;
+  border: 6px solid transparent;
+  /* Increased for visibility */
+  border-radius: 16px;
+  /* Smooth corners */
+  /* Vibrant gradient border */
+  background: border-box linear-gradient(135deg, rgba(99, 102, 241, 0.8), rgba(217, 70, 239, 0.8), rgba(244, 63, 94, 0.8));
+  -webkit-mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 20000;
+  /* CRITICAL: Ensure border sits above header (10002) */
+  /* Add a soft glow behind the border via filter if supported */
+  filter: drop-shadow(0 0 2px rgba(139, 92, 246, 0.5));
+}
+
+/* Prompt Box - Persistent Glow */
 .chat-input-container {
   display: flex;
   gap: 10px;
   align-items: center;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 6px 12px;
-  border-radius: 24px;
-  border: 1px solid var(--border-color);
+  position: relative;
+  z-index: auto !important;
+  border: 2px solid transparent !important;
+  border-radius: 24px !important;
+  background-clip: padding-box !important;
+  background-clip: padding-box !important;
+  /* Use theme-aware background instead of hardcoded dark */
+  background-color: var(--section-bg) !important;
+  box-shadow: inset 0 0 15px rgba(139, 92, 246, 0.3) !important;
+  transition: all 0.3s ease;
 }
+
+/* The glow pseudo-element - Always visible now */
+.chat-input-container::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #d946ef, #f43f5e, #6366f1);
+  background-size: 300% 100%;
+  border-radius: 26px;
+  animation: border-glow 3s linear infinite;
+  opacity: 0.6;
+  /* More subtle by default */
+}
+
+/* Intensify on Focus or Processing */
+.chat-input-container:focus-within,
+.chat-input-container.processing {
+  /* Intensify based on theme - logic handled by opacity/shadow updates mostly */
+  /* We can keep bg color same or slightly darker/lighter */
+  background-color: var(--section-bg) !important;
+  box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.4) !important;
+}
+
+.chat-input-container:focus-within::before,
+.chat-input-container.processing::before {
+  opacity: 1;
+  animation-duration: 2s;
+}
+
+/* Remove old processing block since it's merged */
 
 .chat-input {
   flex: 1;
@@ -1282,4 +1402,118 @@ body {
 .footer-info a:hover {
   opacity: 0.8;
   text-decoration: underline;
+}
+
+/* --- Copy Button Styles --- */
+.message-bubble {
+  position: relative;
+  /* Ensure positioning context for copy button */
+}
+
+.copy-message-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: transparent;
+  /* Subtle background */
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0;
+  /* Hidden by default */
+  transition: opacity 0.2s, background-color 0.2s, color 0.2s;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.message-bubble:hover .copy-message-btn {
+  opacity: 0.6;
+  /* Visible on hover */
+}
+
+.copy-message-btn:hover {
+  opacity: 1 !important;
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Adjust bubble padding to prevent text overlap with button if needed, 
+   or just let it float. top-right is usually safe. */
+
+
+/* --- Gradient Glow Animation (Gemini Style) --- */
+@keyframes border-glow {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Utility for the glowing border effect */
+.glowing-border {
+  position: relative;
+  border: 1px solid transparent !important;
+  /* Hide original border */
+  border-radius: 24px;
+  /* Match container radius */
+  background: padding-box linear-gradient(var(--section-bg), var(--section-bg)),
+    border-box linear-gradient(90deg, #4285F4, #9B72CB, #D96570, #F4B400, #4285F4);
+  /* Google/Gemini Colors */
+  background-size: 200% 100%;
+  animation: border-glow 3s linear infinite;
+  transition: all 0.3s ease;
+}
+
+/* Old processing block removed */
+
+/* Gemini Tab Active Glow */
+.tab-btn[data-tab="gemini-section"].active {
+  /* Override default active style specifically for Gemini */
+  background: linear-gradient(90deg, #4285F4, #9B72CB);
+  color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(66, 133, 244, 0.4);
+}
+
+/* Add a subtle shimmer to Gemini tab */
+.tab-btn[data-tab="gemini-section"].active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: skewX(-25deg);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+
+  20% {
+    left: 200%;
+  }
+
+  /* Fast pass */
+  100% {
+    left: 200%;
+  }
+
+  /* Wait */
 }

@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
-    "name": "Lumina",
-    "version": "1.3",
+    "name": "Lumina - AI Copilot for the web",
+    "version": "1.4",
     "author": "Harsh Raj Singh",
     "description": "Explain anything on your screen - Slides, Papers, News, Articles - using ChatGPT, Gemini and Claude.",
     "permissions": [

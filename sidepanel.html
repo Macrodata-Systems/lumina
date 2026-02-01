@@ -17,7 +17,7 @@
 
         <div id="onboarding-view" class="hidden">
             <div class="setup-content">
-                <div class="logo-large">✨</div>
+                <div class="logo-large">💎</div>
                 <h1>Welcome to Lumina</h1>
                 <p>Your AI Second Brain in the browser.</p>
 
@@ -35,9 +35,6 @@
                         <div class="step-text"><strong>Get Answers</strong> with your own API keys.</div>
                     </div>
                 </div>
-
-                <button id="start-onboarding-btn" class="auth-continue-btn" style="margin-top: 20px;">Get
-                    Started</button>
             </div>
         </div>
 
@@ -181,16 +178,7 @@
                 </div>
             </div>
 
-            <!-- Global Footer Chat Prompt (PRIMARY INPUT) -->
-            <div id="global-chat-footer">
-                <div class="chat-input-container">
-                    <textarea class="chat-input" id="main-chat-input" placeholder="Ask AI... (Press Enter to send)"
-                        rows="1"></textarea>
-                </div>
-            </div>
-
-            <!-- Action Bar (All icons in one row) - Below Chat -->
-            <div class="chips-container chips-footer">
+            <div class="chips-container chips-footer center">
                 <div class="chips">
                     <button id="toggle-screenshot" class="source-btn chip" title="Toggle Screenshot"><i
                             class="fa-solid fa-camera"></i></button>
@@ -207,6 +195,15 @@
                             class="fa-solid fa-file-import"></i></button>
                 </div>
             </div>
+
+            <!-- Global Footer Chat Prompt (PRIMARY INPUT) -->
+            <div id="global-chat-footer">
+                <div class="chat-input-container">
+                    <textarea class="chat-input" id="main-chat-input" placeholder="Ask AI... (Press Enter to send)"
+                        rows="1"></textarea>
+                </div>
+            </div>
+
             <div class="chips-container chips-footer">
                 <div class="chips">
                     <button class="chip" data-prompt="Summarize this page"
