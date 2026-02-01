@@ -1445,6 +1445,16 @@ body::after {
 /* Adjust bubble padding to prevent text overlap with button if needed, 
    or just let it float. top-right is usually safe. */
 
+.chat-screenshot {
+  opacity: 1 !important;
+  filter: none !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.chat-screenshot:hover {
+  transform: scale(1.02);
+}
 
 /* --- Gradient Glow Animation (Gemini Style) --- */
 @keyframes border-glow {

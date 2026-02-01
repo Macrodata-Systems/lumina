@@ -1,12 +1,19 @@
 # Lumina - AI Copilot for the Web
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-blue?logo=google-chrome)](https://chromewebstore.google.com/detail/lumina/fleclagpjeadgabepikpaajhbjbcobfg)
-[![Version](https://img.shields.io/badge/version-1.3-green.svg)](manifest.json)
+[![Version](https://img.shields.io/badge/version-1.4-green.svg)](manifest.json)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 
 **Lightweight. Private. Powerful.**
 
 Lumina is a Chrome extension that lets you explain anything on your screen using AI. Works with Gemini, ChatGPT, and Claude - all from one unified interface.
+
+## 🆕 What's New (v1.4)
+
+- ⚡ **Instant Summaries** - Auto-summarize triggers immediately on open
+- 🌈 **Vibrant Vision** - High-fidelity PNG screenshots for clearer analysis
+- 🔄 **Smart Refresh** - Re-run your last prompt with a single click
+- 🧹 **Refined UI** - Cleaner interface with less visual noise
 
 ## ✨ Key Features
 
