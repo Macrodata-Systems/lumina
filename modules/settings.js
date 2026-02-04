@@ -1,3 +1,9 @@
+/**
+ * Lumina - AI Copilot for the Web
+ * Copyright (c) 2026 Harsh Raj Singh. All Rights Reserved.
+ * Proprietary and Confidential.
+ */
+
 import { API_CONFIG } from '../config.js';
 import { getStorage, setStorage, removeStorage } from './storage.js';
 import { showDebugMessage, renderAuthCard } from './ui.js';

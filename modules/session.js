@@ -1,4 +1,10 @@
 /**
+ * Lumina - AI Copilot for the Web
+ * Copyright (c) 2026 Harsh Raj Singh. All Rights Reserved.
+ * Proprietary and Confidential.
+ */
+
+/**
  * Session management constants
  */
 const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours in milliseconds

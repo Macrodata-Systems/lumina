@@ -1,3 +1,9 @@
+/**
+ * Lumina - AI Copilot for the Web
+ * Copyright (c) 2026 Harsh Raj Singh. All Rights Reserved.
+ * Proprietary and Confidential.
+ */
+
 export async function callAnthropic(apiKey, base64Image, prompt = "explain", conversationHistory = null) {
   const url = 'https://api.anthropic.com/v1/messages';
 

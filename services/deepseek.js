@@ -1,3 +1,9 @@
+/**
+ * Lumina - AI Copilot for the Web
+ * Copyright (c) 2026 Harsh Raj Singh. All Rights Reserved.
+ * Proprietary and Confidential.
+ */
+
 export async function callDeepSeek(apiKey, screenshotUrl, promptText, onUpdate) {
     const deepseekEndpoint = 'https://api.deepseek.com/chat/completions';
 

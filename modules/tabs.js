@@ -1,3 +1,9 @@
+/**
+ * Lumina - AI Copilot for the Web
+ * Copyright (c) 2026 Harsh Raj Singh. All Rights Reserved.
+ * Proprietary and Confidential.
+ */
+
 import { MODEL_KEY_MAP } from './constants.js';
 import { getKeyNameFromSection, hasAnyKey } from './keys.js';
 import { renderAuthCard, setupChatInterface, renderChatMessage, updateSection, showDebugMessage } from './ui.js';

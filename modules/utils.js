@@ -1,4 +1,10 @@
 /**
+ * Lumina - AI Copilot for the Web
+ * Copyright (c) 2026 Harsh Raj Singh. All Rights Reserved.
+ * Proprietary and Confidential.
+ */
+
+/**
  * Format markdown text to HTML (Simple formatter)
  * @param {string} text 
  * @returns {string}

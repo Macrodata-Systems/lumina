@@ -1,4 +1,10 @@
 /**
+ * Lumina - AI Copilot for the Web
+ * Copyright (c) 2026 Harsh Raj Singh. All Rights Reserved.
+ * Proprietary and Confidential.
+ */
+
+/**
  * Helper to get multiple keys from storage
  * @param {string[]} keys - keys to retrieve
  * @returns {Promise<Object>}

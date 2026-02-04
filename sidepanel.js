@@ -1,3 +1,9 @@
+/**
+ * Lumina - AI Copilot for the Web
+ * Copyright (c) 2026 Harsh Raj Singh. All Rights Reserved.
+ * Proprietary and Confidential.
+ */
+
 import { initTabs, switchTab } from './modules/tabs.js';
 import { attemptEntry, initAuth } from './modules/auth.js';
 import { checkSessionExpiry } from './modules/session.js';

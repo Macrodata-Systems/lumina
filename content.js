@@ -1,3 +1,9 @@
+/**
+ * Lumina - AI Copilot for the Web
+ * Copyright (c) 2026 Harsh Raj Singh. All Rights Reserved.
+ * Proprietary and Confidential.
+ */
+
 // Lumina: Content Script Loaded (v1.3.1)
 
 // Create Bubble Element (Direct Injection, No Shadow DOM to avoid complexity)
