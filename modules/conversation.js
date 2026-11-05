@@ -21,6 +21,7 @@ import { captureTab, extractFollowUps } from './utils.js';
 import { renderChatMessage, updateChips, showDebugMessage } from './ui.js';
 import { EventBus } from './events.js';
 import { saveToHistory } from './history.js';
+import { searchMemory } from './rag.js';
 
 // Conversation History
 export const conversationHistory = {
@@ -78,19 +79,64 @@ export async function triggerFollowUpChat(service, message, forceScreenshot = fa
 
     const sectionId = `${service}-section`;
 
+    if (message.startsWith('/save ')) {
+        const fileName = message.replace('/save ', '').trim();
+        if (fileName && conversationHistory[service].length > 0) {
+            const lastMsg = [...conversationHistory[service]].reverse().find(m => m.role === 'assistant');
+            if (lastMsg) {
+                try {
+                    // Quick import of FileSystem
+                    const { FileSystem } = await import('../os/filesystem.js');
+                    const fs = new FileSystem();
+                    await fs.init();
+
+                    const finalPath = fileName.startsWith('/') ? fileName : '/' + fileName;
+                    await fs.writeFile(finalPath, lastMsg.content, 'text/markdown');
+
+                    renderChatMessage('user', message, sectionId, null);
+                    renderChatMessage('assistant', `✅ Successfully saved the last response to Finder as **${finalPath}**.\n\nOpen the \`Finder\` app from the OS dock to view it.`, sectionId);
+
+                    // Refresh Finder if it's currently open
+                    if (window.luminaKernel && window.luminaKernel.apps['finder']) {
+                        window.luminaKernel.apps['finder'].refresh();
+                    }
+
+                    saveToHistory(message, `Saved artifact to FileSystem: ${finalPath}`, service.toUpperCase());
+                } catch (e) {
+                    renderChatMessage('assistant', `❌ Failed to save file: ${e.message}`, sectionId);
+                }
+                return; // halt chat generation
+            }
+        }
+
+        renderChatMessage('assistant', `❌ No previous response found to save, or invalid filename.`, sectionId);
+        return; // halt chat generation
+    }
+
     // Capture Screenshot (if forced or enabled globally)
     let screenshotData = null;
     const shouldCapture = forceScreenshot || window.useScreenshot;
 
     if (shouldCapture) {
-        // showDebugMessage('Attempting to capture screenshot...');
-        try {
-            screenshotData = await captureTab();
-            // showDebugMessage('Screenshot captured successfully.');
-        } catch (err) {
-            console.warn("Screenshot capture failed:", err);
-            showDebugMessage(`Screenshot capture failed: ${err.message}`);
-            renderChatMessage('assistant', `⚠️ Screenshot failed: ${err.message}`, sectionId);
+        const cachedScreenshot = window.sessionStorage.getItem('temp_screenshot_url');
+        if (cachedScreenshot) {
+            try {
+                const parsed = JSON.parse(cachedScreenshot);
+                screenshotData = Array.isArray(parsed) ? parsed : cachedScreenshot;
+            } catch (e) {
+                screenshotData = cachedScreenshot;
+            }
+            window.sessionStorage.removeItem('temp_screenshot_url'); // Consume it
+        } else {
+            // showDebugMessage('Attempting to capture screenshot...');
+            try {
+                screenshotData = await captureTab();
+                // showDebugMessage('Screenshot captured successfully.');
+            } catch (err) {
+                console.warn("Screenshot capture failed:", err);
+                showDebugMessage(`Screenshot capture failed: ${err.message}`);
+                renderChatMessage('assistant', `⚠️ Screenshot failed: ${err.message}`, sectionId);
+            }
         }
     }
 
@@ -120,8 +166,23 @@ export async function triggerFollowUpChat(service, message, forceScreenshot = fa
         const keyName = getKeyNameFromSection(sectionId);
         const apiKey = combinedKeys[keyName];
 
+        // Memory Retrieval (RAG)
+        let memoryContext = "";
+        if (window.useMemory && combinedKeys.geminiKey) {
+            try {
+                const memories = await searchMemory(message, combinedKeys.geminiKey, 3);
+                if (memories && memories.length > 0) {
+                    memoryContext = "\n\n[RELEVANT MEMORY from Knowledge Base]:\n" +
+                        memories.map(m => `- ${m.text}`).join('\n') +
+                        "\n[End Memory]\n";
+                }
+            } catch (e) {
+                console.warn("Memory search failed during chat:", e);
+            }
+        }
+
         // Augmented Prompt
-        const augmentedMessage = message + `\n\nAlso provide 3 short, relevant follow-up questions. Format them as a JSON list at the end: :::JSON[...]:::`;
+        const augmentedMessage = message + memoryContext + `\n\nAlso provide 3 short, relevant follow-up questions. Format them as a JSON list at the end: :::JSON[...]:::`;
 
         conversationHistory[service].push({ role: 'user', content: augmentedMessage });
 

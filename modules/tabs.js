@@ -10,6 +10,7 @@ import { renderAuthCard, setupChatInterface, renderChatMessage, updateSection, s
 import { renderHistory } from './history.js';
 import { getStorage } from './storage.js';
 import { EventBus } from './events.js';
+import { renderMemory } from './memory_ui.js';
 
 /**
  * Initialize Tab Logic
@@ -152,6 +153,10 @@ export function switchTab(tabId) {
                 const footerPrompt = document.getElementById('global-chat-footer');
                 if (footerPrompt) footerPrompt.classList.add('hidden');
                 renderHistory();
+            } else if (tabId === 'memory-section') {
+                const footerPrompt = document.getElementById('global-chat-footer');
+                if (footerPrompt) footerPrompt.classList.add('hidden');
+                renderMemory();
             }
 
         } else {

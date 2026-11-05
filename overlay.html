@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumina Assistant</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 16px;
+            background: #0f0f14;
+            color: #e0e0e0;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-y: auto;
+        }
+
+        /* Markdown / Formatted Results */
+        #overlay-content {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        #overlay-content h1,
+        #overlay-content h2,
+        #overlay-content h3 {
+            color: white;
+            margin: 20px 0 10px 0;
+            font-size: 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 5px;
+        }
+
+        #overlay-content h3 {
+            font-size: 16px;
+            border-bottom: none;
+        }
+
+        #overlay-content strong {
+            color: #75ff8f;
+        }
+
+        /* Inline Code */
+        #overlay-content code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            color: #a5b4fc;
+            font-size: 0.9em;
+        }
+
+        /* Code Blocks */
+        .code-wrapper {
+            position: relative;
+            margin: 15px 0;
+        }
+
+        #overlay-content pre {
+            background: #1e1e24;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 0;
+            padding-top: 32px;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #a5b4fc;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        #overlay-content pre code {
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+            color: #e0e0e0;
+            font-size: 0.85em;
+        }
+
+        #overlay-content ul,
+        #overlay-content ol {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+
+        #overlay-content li {
+            margin-bottom: 6px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #75ff8f;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #75ff8f;
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #copy-all-btn {
+            margin-left: auto;
+        }
+
+        #mic-btn.active {
+            background: #ff4757;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        #mic-status {
+            font-size: 11px;
+            color: #888;
+            margin-top: -10px;
+            margin-bottom: 10px;
+            display: none;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="dot"></div>Lumina Assistant Answer
+        <button id="copy-all-btn" class="icon-btn" title="Copy Full Answer">📋</button>
+        <button id="mic-btn" class="icon-btn" title="Listen to Interviewer">🎙️</button>
+    </div>
+    <div id="mic-status">Listening... <span></span></div>
+    <div id="overlay-content">Loading...</div>
+
+    <!-- Parsers -->
+    <script src="assets/libs/marked.min.js"></script>
+    <script src="assets/libs/mermaid.min.js"></script>
+    <script type="module" src="overlay.js"></script>
+</body>
+
+</html>

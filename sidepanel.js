@@ -14,11 +14,17 @@ import { captureTab } from './modules/utils.js';
 import { getStorage, setStorage } from './modules/storage.js';
 import { EventBus } from './modules/events.js';
 import { triggerFollowUpChat, conversationHistory } from './modules/conversation.js';
-import { scrapePageText } from './modules/utils.js';
+import { scrapePageText, scrapePageMarkdown } from './modules/utils.js';
+import { memorizePage } from './modules/rag.js';
+import { initMemoryUI } from './modules/memory_ui.js';
+import { getArchitectureHTML } from './modules/architecture_content.js';
 
 
 // Global styles for Prism are loaded via HTML, but we can ensure they are applied if needed.
 // (Prism is global under window.Prism)
+
+let shortcutScreenshotAccumulator = [];
+let shortcutDebounceTimeout = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Initialize Modules
@@ -27,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAuth();
     await initHistory();
     setupChatInterface();
+    initMemoryUI();
 
     // 2. Load Theme
     const { theme, uiLocks } = await getStorage(['theme', 'uiLocks']);
@@ -42,8 +49,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 5. Setup Global Listeners
     setupSwipeNavigation();
     setupScreenshotToggle();
+    setupMemoryToggle();
     setupAudioInput();
     setupTextLoader();
+    setupMemoryFeature();
     setupTabChangeListener();
 
     // Setup Theme Toggle
@@ -186,14 +195,98 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 7. Initial Auto-Summarize Trigger (on Open)
-    getStorage(['autoSummarizeEnabled']).then(({ autoSummarizeEnabled }) => {
-        if (autoSummarizeEnabled !== false) {
-            // showDebugMessage('Startup: Auto-Summarize Enabled. Triggering...');
-            setTimeout(() => {
-                EventBus.emit('trigger:explanation');
-            }, 1000); // Slight delay for UI to settle
+    const checkStorageTriggers = () => {
+        getStorage(['autoSummarizeEnabled', 'pending_java_screenshot', 'pending_system_design_screenshot', 'pending_code_review_screenshot', 'show_architecture_trigger']).then(({ autoSummarizeEnabled, pending_java_screenshot, pending_system_design_screenshot, pending_code_review_screenshot, show_architecture_trigger }) => {
+
+            // Handle Architecture Display Override
+            if (show_architecture_trigger) {
+                chrome.storage.local.remove('show_architecture_trigger');
+
+                setTimeout(() => {
+                    const activeSec = document.querySelector('.active-section');
+                    if (activeSec) {
+                        const sectionId = activeSec.id;
+                        const archMessage = getArchitectureHTML();
+
+                        renderChatMessage('user', "Show me the full Architecture Document of Lumina.", sectionId);
+
+                        // Render the assistant message directly as markdown
+                        setTimeout(() => {
+                            renderChatMessage('assistant', archMessage, sectionId, null, null, false);
+                        }, 400);
+                    }
+                }, 500);
+                return;
+            }
+
+            // Handle Auto Java/System Design/Code Review Solver Override Strategy
+            if (pending_java_screenshot || pending_system_design_screenshot || pending_code_review_screenshot) {
+                const isJava = !!pending_java_screenshot;
+                const isSysDesign = !!pending_system_design_screenshot;
+
+                const incomingScreenshot = pending_java_screenshot || pending_system_design_screenshot || pending_code_review_screenshot;
+                shortcutScreenshotAccumulator.push(incomingScreenshot);
+
+                // Clear it immediately to avoid cyclic triggers
+                if (isJava) chrome.storage.local.remove('pending_java_screenshot');
+                else if (isSysDesign) chrome.storage.local.remove('pending_system_design_screenshot');
+                else chrome.storage.local.remove('pending_code_review_screenshot');
+
+                // Set global screenshot explicitly as a JSON array string
+                window.sessionStorage.setItem('temp_screenshot_url', JSON.stringify(shortcutScreenshotAccumulator));
+                window.useScreenshot = true;
+
+                // Pre-fill input with the instruction
+                const promptInput = document.getElementById('main-chat-input');
+                const targetPrompt = isJava
+                    ? "Explain and solve this Java code. First, briefly explain a brute-force approach including its time and space complexity. Then, provide the most optimal code solution with a brief explanation, along with its time and space complexity."
+                    : isSysDesign
+                        ? "Help me with this system design problem. First, suggest 2-3 clarifying questions I should ask the interviewer to better understand the constraints. Then, provide a structured, high-level architectural overview, identify key components, and suggest the best technologies or patterns to use. IMPORTANT: Phrase your entire answer precisely as if I am speaking it directly to the interviewer right now using the STAR (Situation, Task, Action, Result) method. Keep it conversational but highly technical. Also, NEVER use short forms or abbreviations without providing the full form in brackets."
+                        : "Perform a thorough code review of the code in the screenshot. Identify bugs, security vulnerabilities, performance issues, and suggest improvements with code snippets. IMPORTANT: Phrase your entire answer precisely as if I am speaking it directly to the interviewer right now using the STAR (Situation, Task, Action, Result) method. Keep it conversational but highly technical. Also, NEVER use short forms or abbreviations without providing the full form in brackets.";
+
+                if (promptInput) {
+                    promptInput.value = targetPrompt;
+                }
+
+                if (shortcutDebounceTimeout) clearTimeout(shortcutDebounceTimeout);
+
+                // Simulate the send sequence slightly delayed to act as a debounce
+                shortcutDebounceTimeout = setTimeout(() => {
+                    const activeSec = document.querySelector('.active-section');
+                    if (activeSec) {
+                        const service = activeSec.id.replace('-section', '');
+
+                        // The triggerFollowUpChat checks window.useScreenshot and uses sessionStorage fallback
+                        triggerFollowUpChat(service, targetPrompt, true);
+
+                        if (promptInput) promptInput.value = '';
+                        setTimeout(() => {
+                            window.useScreenshot = false;
+                            shortcutScreenshotAccumulator = []; // reset accumulator after sending
+                        }, 2000);
+                    }
+                }, 2000);
+
+                return; // Skip auto-summarize if we are explicitly running the Java solver
+            }
+
+            if (autoSummarizeEnabled !== false) {
+                // showDebugMessage('Startup: Auto-Summarize Enabled. Triggering...');
+                setTimeout(() => {
+                    EventBus.emit('trigger:explanation');
+                }, 1000); // Slight delay for UI to settle
+            }
+        });
+    };
+
+    checkStorageTriggers();
+
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.action === 'check_triggers') {
+            checkStorageTriggers();
         }
     });
+
 });
 
 /**
@@ -299,6 +392,21 @@ function setupScreenshotToggle() {
 }
 
 /**
+ * Setup Memory Toggle (RAG)
+ */
+function setupMemoryToggle() {
+    const memToggle = document.getElementById('toggle-memory-btn');
+    window.useMemory = false; // Default
+
+    if (memToggle) {
+        memToggle.addEventListener('click', () => {
+            window.useMemory = !window.useMemory;
+            memToggle.classList.toggle('active', window.useMemory);
+        });
+    }
+}
+
+/**
  * Setup Audio Input (Web Speech API)
  */
 function setupAudioInput() {
@@ -307,31 +415,64 @@ function setupAudioInput() {
 
     if ('webkitSpeechRecognition' in window && micBtn && promptInput) {
         const recognition = new webkitSpeechRecognition();
-        recognition.continuous = false;
+        recognition.continuous = true;
         recognition.interimResults = false;
+
+        let isExplicitlyStopped = false;
 
         micBtn.addEventListener('click', () => {
             if (micBtn.classList.contains('listening')) {
+                isExplicitlyStopped = true;
                 recognition.stop();
+                micBtn.classList.remove('listening');
             } else {
-                recognition.start();
+                isExplicitlyStopped = false;
+                try {
+                    recognition.start();
+                } catch (e) { }
                 micBtn.classList.add('listening');
             }
         });
 
         recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            promptInput.value += (promptInput.value ? " " : "") + transcript;
-            micBtn.classList.remove('listening');
+            // Append all new results from this continuous session
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    const transcript = event.results[i][0].transcript.trim();
+                    if (transcript) {
+                        promptInput.value += (promptInput.value ? " " : "") + transcript;
+                    }
+                }
+            }
         };
 
         recognition.onerror = (event) => {
             console.error("Speech Error:", event.error);
-            micBtn.classList.remove('listening');
+            // If the user denied permission or service is unavailable, do not try to restart
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                isExplicitlyStopped = true;
+                micBtn.classList.remove('listening');
+            }
         };
 
         recognition.onend = () => {
-            micBtn.classList.remove('listening');
+            // If the user didn't explicitly click stop, keep listening
+            if (!isExplicitlyStopped) {
+                // Add a small delay before restarting to prevent infinite crash loops
+                setTimeout(() => {
+                    if (!isExplicitlyStopped) {
+                        try {
+                            recognition.start();
+                            micBtn.classList.add('listening'); // Ensure UI reflects listening state
+                        } catch (e) {
+                            console.error("Failed to automatically restart recognition", e);
+                            micBtn.classList.remove('listening');
+                        }
+                    }
+                }, 300);
+            } else {
+                micBtn.classList.remove('listening');
+            }
         };
     } else if (micBtn) {
         micBtn.style.display = 'none';
@@ -395,6 +536,63 @@ function setupTextLoader() {
         });
         window.usePageText = false; // Init default
     }
+}
+
+/**
+ * Setup Memory Feature (RAG)
+ */
+function setupMemoryFeature() {
+    const memBtn = document.getElementById('memorize-btn');
+    if (!memBtn) return;
+
+    memBtn.addEventListener('click', async () => {
+        // 1. Get Key
+        const { geminiKey: apiKey } = await getStorage(['geminiKey']);
+        if (!apiKey) {
+            alert('Please add a Gemini API Key in settings to use Memory.');
+            return;
+        }
+
+        // 2. Visual Feedback
+        const originalIcon = memBtn.innerHTML;
+        memBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+        memBtn.classList.add('active');
+
+        try {
+            // 3. Get Page Details
+            // Use chrome.tabs to get title/url
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab) throw new Error("No active tab");
+
+            const content = await scrapePageMarkdown();
+            if (!content || content.length < 50) {
+                throw new Error("Page content illegal or too short.");
+            }
+
+            // 4. Memorize
+            await memorizePage({
+                title: tab.title,
+                url: tab.url,
+                content: content
+            }, apiKey);
+
+            // 5. Success
+            memBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            setTimeout(() => {
+                memBtn.innerHTML = originalIcon;
+                memBtn.classList.remove('active');
+            }, 2000);
+
+        } catch (error) {
+            console.error(error);
+            alert(`Memorization Failed: ${error.message}`);
+            memBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            setTimeout(() => {
+                memBtn.innerHTML = originalIcon;
+                memBtn.classList.remove('active');
+            }, 2000);
+        }
+    });
 }
 
 /**

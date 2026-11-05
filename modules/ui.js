@@ -235,7 +235,14 @@ export function renderChatMessage(role, content, sectionId, imageUrl = null, mes
         chatContainer.appendChild(messageDiv);
     }
 
-    let imageHtml = imageUrl ? `<img src="${imageUrl}" class="chat-screenshot" style="max-width: 100%; border-radius: 8px; margin-bottom: 8px; cursor: zoom-in; display: block;" onclick="window.open('${imageUrl}')">` : '';
+    let imageHtml = '';
+    if (imageUrl) {
+        if (Array.isArray(imageUrl)) {
+            imageHtml = imageUrl.map(url => `<img src="${url}" class="chat-screenshot" style="max-width: 100%; border-radius: 8px; margin-bottom: 8px; cursor: zoom-in; display: block;" onclick="window.open('${url}')">`).join('');
+        } else {
+            imageHtml = `<img src="${imageUrl}" class="chat-screenshot" style="max-width: 100%; border-radius: 8px; margin-bottom: 8px; cursor: zoom-in; display: block;" onclick="window.open('${imageUrl}')">`;
+        }
+    }
 
     const formattedContent = (isHtml || content === '...' || content === '') ? content : formatMarkdown(content);
 
@@ -269,9 +276,6 @@ export function renderChatMessage(role, content, sectionId, imageUrl = null, mes
         }
     }
 
-    requestAnimationFrame(() => {
-        messageDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    });
 }
 
 /**
@@ -289,9 +293,6 @@ export function updateSection(id, text) {
     const contentDiv = document.querySelector(`#${id} .content`);
     if (contentDiv) {
         contentDiv.innerHTML = text;
-        requestAnimationFrame(() => {
-            contentDiv.scrollTo({ top: contentDiv.scrollHeight, behavior: 'smooth' });
-        });
     }
 }
 

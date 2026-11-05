@@ -5,18 +5,50 @@
  */
 
 /**
- * Format markdown text to HTML (Simple formatter)
+ * Format markdown text to HTML using marked.js
  * @param {string} text 
  * @returns {string}
  */
 export function formatMarkdown(text) {
     if (!text) return '';
+
+    // Check if marked is available globally (loaded via script tag in html)
+    if (typeof marked !== 'undefined') {
+        try {
+            // First extract Mermaid diagrams so marked doesn't mangle them
+            // We temporarily replace them with placeholders
+            let mermaidBlocks = [];
+            let processedText = text.replace(/```mermaid\n([\s\S]*?)```/g, (match, content) => {
+                const id = `MERMAID_PLACEHOLDER_${mermaidBlocks.length}`;
+                mermaidBlocks.push(content);
+                return id;
+            });
+
+            // Parse with Marked
+            let html = marked.parse(processedText);
+
+            // Inject the proper mermaid HTML back in
+            mermaidBlocks.forEach((content, i) => {
+                html = html.replace(`MERMAID_PLACEHOLDER_${i}`, `<div class="mermaid">${content}</div>`);
+            });
+
+            return html;
+        } catch (e) {
+            console.error("Marked parsing error:", e);
+            // Fallback to simple parser on error
+        }
+    }
+
+    // Fallback if marked isn't available
     let html = text
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
         .replace(/\*(.*?)\*/g, "<em>$1</em>")
+        .replace(/```mermaid\n([\s\S]*?)```/g, '<div class="mermaid">$1</div>')
+        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+        .replace(/`(.*?)`/g, '<code>$1</code>')
         .replace(/\n/g, "<br>");
     return html;
 }
@@ -50,6 +82,7 @@ export async function captureTab() {
         });
     });
 }
+
 
 /**
  * Scrape text from the active page
@@ -92,6 +125,71 @@ export async function scrapePageText() {
                     console.log(`[Lumina] Scripting skipped/failed: ${msg}`);
                     resolve('');
                 } else if (!results || !results[0]) {
+                    resolve('');
+                } else {
+                    resolve(results[0].result || '');
+                }
+            });
+        });
+    });
+}
+
+/**
+ * Scrape Page Content as Markdown (Simplified)
+ * Preserves headers for chunking.
+ * @returns {Promise<string>}
+ */
+export async function scrapePageMarkdown() {
+    return new Promise((resolve) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!tabs || tabs.length === 0) {
+                resolve('');
+                return;
+            }
+            const activeTab = tabs[0];
+            const restrictedPrefixes = ['chrome://', 'edge://', 'about:', 'view-source:', 'chrome-extension://', 'https://chrome.google.com/webstore', 'https://chromewebstore.google.com'];
+
+            if (!activeTab.url || restrictedPrefixes.some(p => activeTab.url.startsWith(p))) {
+                resolve('');
+                return;
+            }
+
+            chrome.scripting.executeScript({
+                target: { tabId: activeTab.id },
+                func: () => {
+                    // Simple HTML to Markdown Converter
+                    function turndown(node) {
+                        let text = "";
+                        for (let child of node.childNodes) {
+                            if (child.nodeType === 3) { // Text
+                                text += child.textContent;
+                            } else if (child.nodeType === 1) { // Element
+                                const tag = child.tagName.toLowerCase();
+                                let childText = turndown(child);
+
+                                if (['script', 'style', 'noscript', 'iframe', 'svg'].includes(tag)) continue;
+
+                                if (tag === 'h1') text += `\n# ${childText}\n`;
+                                else if (tag === 'h2') text += `\n## ${childText}\n`;
+                                else if (tag === 'h3') text += `\n### ${childText}\n`;
+                                else if (tag === 'h4') text += `\n#### ${childText}\n`;
+                                else if (tag === 'p') text += `\n${childText}\n`;
+                                else if (tag === 'li') text += `\n- ${childText}`;
+                                else if (tag === 'br') text += `\n`;
+                                else if (tag === 'div' || tag === 'section' || tag === 'article') text += `\n${childText}\n`;
+                                else text += childText; // span, b, i, etc.
+                            }
+                        }
+                        return text;
+                    }
+                    // Use readability or body
+                    const readerContent = document.querySelector('article') || document.body;
+                    let md = turndown(readerContent);
+                    // Cleanup excessive newlines
+                    return md.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+                }
+            }, (results) => {
+                if (chrome.runtime.lastError || !results || !results[0]) {
                     resolve('');
                 } else {
                     resolve(results[0].result || '');

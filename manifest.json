@@ -7,10 +7,17 @@
     "permissions": [
         "activeTab",
         "storage",
-        "sidePanel",
+        "contextMenus",
         "scripting",
-        "clipboardRead"
+        "clipboardRead",
+        "tabs",
+        "management",
+        "notifications",
+        "sidePanel"
     ],
+    "chrome_url_overrides": {
+        "newtab": "desktop.html"
+    },
     "host_permissions": [
         "<all_urls>"
     ],
@@ -37,8 +44,39 @@
     "side_panel": {
         "default_path": "sidepanel.html"
     },
+    "commands": {
+        "silent_java_solver": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+1",
+                "mac": "Command+Shift+1"
+            },
+            "description": "Silent capture and Java,Python solve"
+        },
+        "silent_system_design": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+2",
+                "mac": "Command+Shift+2"
+            },
+            "description": "Silent capture and System Design help"
+        },
+        "silent_code_review": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+6",
+                "mac": "Command+Shift+6"
+            },
+            "description": "Silent capture and Code Review"
+        },
+        "show_lumina_architecture": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+L",
+                "mac": "Command+Shift+L"
+            },
+            "description": "Show Lumina Architecture"
+        }
+    },
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background.js",
+        "type": "module"
     },
     "icons": {
         "16": "assets/icon16.png",

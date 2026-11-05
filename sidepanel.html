@@ -86,6 +86,8 @@
                     <button class="tab-btn" data-tab="deepseek-section" title="DeepSeek AI" style="display: none">
                         鲨 DeepSeek <span class="model-badge">Coding</span>
                     </button> -->
+                    <button class="tab-btn" data-tab="memory-section" title="View Knowledge Base">🧠
+                        Memory</button>
                     <button class="tab-btn" data-tab="history-section" title="View conversation history">📜
                         History</button>
                 </div>
@@ -119,6 +121,27 @@
                     </div>
                     <div class="content"></div>
                 </div>
+                <!-- Memory Section (RAG) -->
+                <div class="result-section" id="memory-section">
+                    <div class="section-header">
+                        <h3>Knowledge Base</h3>
+                        <div class="header-actions-small">
+                            <button id="refresh-memory-btn" class="icon-action-btn" title="Refresh List"><i
+                                    class="fa-solid fa-rotate-right"></i></button>
+                            <button id="clear-memory-btn" class="icon-action-btn" title="Clear All Memory"><i
+                                    class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <div class="memory-search-container" style="padding: 0 15px 10px 15px;">
+                        <input type="text" id="memory-search-input" placeholder="Search your memory..."
+                            class="search-input"
+                            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-primary);">
+                    </div>
+                    <div class="content memory-list-container">
+                        <div class="empty-state">Loading memory...</div>
+                    </div>
+                </div>
+
                 <div class="result-section" id="groq-section">
                     <div class="section-header">
                         <h3>Groq Response</h3>
@@ -196,6 +219,8 @@
                             class="fa-solid fa-camera"></i></button>
                     <button id="toggle-pagetext" class="source-btn active chip" title="Toggle Page Text"><i
                             class="fa-solid fa-file-lines"></i></button>
+                    <button id="toggle-memory-btn" class="source-btn chip" title="Include Memory (RAG)"><i
+                            class="fa-solid fa-brain"></i></button>
                     <div class="action-divider"></div>
                     <button id="auto-summarize-toggle" class="icon-action-btn chip"
                         title="Toggle Auto-Summarize">⚡</button>
@@ -205,6 +230,13 @@
                             class="fa-solid fa-microphone"></i></button>
                     <button id="load-text-btn" class="icon-action-btn chip" title="Paste Page Text"><i
                             class="fa-solid fa-file-import"></i></button>
+                    <div class="action-divider"></div>
+                    <button id="memorize-btn" class="icon-action-btn chip" title="Memorize Page to Knowledge Base"><i
+                            class="fa-solid fa-bookmark"></i></button>
+                    <div class="action-divider"></div>
+                    <button id="upload-btn" class="icon-action-btn chip" title="Upload File (Any type)"><i
+                            class="fa-solid fa-upload"></i></button>
+                    <input type="file" id="file-upload-input" accept="*/*" style="display: none;">
                 </div>
             </div>
 
